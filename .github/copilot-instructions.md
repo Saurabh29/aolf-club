@@ -1,87 +1,62 @@
 # Copilot instructions for this repository
 
-A SolidStart Location management app with DynamoDB backend, Google Places integration, and Zod validation.
+This repository is a small SolidStart (SolidJS) application scaffolded with the Solid CLI and configured to use TailwindCSS.
 
-## Purpose for AI agents
-- Help developers build Location CRUD features using SolidStart, DynamoDB single-table design, and Google Places
-- Ensure Zod schema patterns are followed (DB schema authoritative, UI schemas derived)
-- Maintain light-mode-only styling with solid-ui components
+Purpose for AI agents
+- Help developers work on a SolidStart app that uses `vinxi` dev/build/start scripts and `@solidjs/start` runtime.
+- Make small, scoped changes (components, routes, styles) and provide runnable guidance for testing locally.
 
-## Big-picture architecture
+Big-picture architecture (quick)
+- Entrypoints:
+  - `src/entry-server.tsx` — server-side handler using `StartServer` (HTML document template).
+  - `src/entry-client.tsx` — client mount using `StartClient`.
+  - `src/app.tsx` — top-level app that wires `Router` and `FileRoutes`.
+- Routing: `src/routes/*` are file-based routes loaded by `FileRoutes` from `@solidjs/start/router`.
+- Components: `src/components/*` contains UI components (e.g., `Nav.tsx`, `Counter.tsx`).
 
-### Frontend
-- **Entrypoints**: `src/entry-server.tsx` (SSR), `src/entry-client.tsx` (hydration), `src/app.tsx` (router)
-- **Routes**: File-based in `src/routes/*`; protected routes in `src/routes/(protected)/*`
-- **Components**: `src/components/ui/*` (solid-ui), `src/components/*.tsx` (feature components)
+Key developer workflows (how to run & test)
+- Local dev: `pnpm install` then `pnpm run dev` (package.json uses `vinxi dev`).
+- Build: `pnpm run build` (runs `vinxi build`).
+- Start production: `pnpm run start` (runs `vinxi start`).
+- Node requirement: Node >= 22 as declared in `package.json` `engines`.
 
-### Backend
-- **Server actions**: `src/server/actions/*.ts` — all mutations use `"use server"` directive
-- **Repository**: `src/server/db/repositories/*.ts` — DynamoDB access layer
-- **Client**: `src/server/db/client.ts` — AWS SDK v3 DocumentClient
+Project-specific conventions & patterns
+- File-based routing: add files under `src/routes` to create routes. Use default exports for route components.
+- Use `~` import alias for `src` (seen in `import Nav from "~/components/Nav"`). Respect these paths when editing imports.
+- Styling: Tailwind classes are used in-line; `app.config.ts` adds the Tailwind Vite plugin.
+- Minimal suspense: `app.tsx` wraps route children with `Suspense` — prefer to return Resolving resources inside routes or components.
 
-### Data Layer
-- **DynamoDB single-table**: No GSIs, uses lookup items for secondary access patterns
-- **IDs**: All entity IDs use ULID format (not UUID)
-- **Schemas**: `src/lib/schemas/db/*.ts` (authoritative), `src/lib/schemas/ui/*.ts` (derived)
+Integration points & dependencies
+- `@solidjs/start` — provides `StartClient`, `StartServer`, `FileRoutes`, and router integration.
+- `vinxi` — CLI that runs development, build and start processes per scripts in `package.json`.
+- TailwindCSS — configured via `app.config.ts` with `@tailwindcss/vite` plugin.
 
-## Critical patterns
+Patterns to follow when editing
+- Keep changes small and focused — this is a starter app. Update or add one route/component per PR.
+- Match the import style: prefer `import X from "~/..."` for local modules.
+- When updating routes, remember `FileRoutes` auto-loads files — no extra router registration required.
 
-### Zod Schema Derivation (MUST follow)
-```typescript
-// DB Schema is authoritative (src/lib/schemas/db/location.schema.ts)
-export const LocationDbSchema = z.object({ ... });
+Files to inspect for common tasks
+- App shell & routing: `src/app.tsx`
+- Client/server entrypoints: `src/entry-client.tsx`, `src/entry-server.tsx`
+- Routes: `src/routes/*.tsx` (e.g., `index.tsx`, `about.tsx`)
+- Components: `src/components/*.tsx` (e.g., `Nav.tsx`, `Counter.tsx`)
+- Config: `app.config.ts`, `package.json`, `tsconfig.json`
 
-// UI Schema MUST derive via omit/pick/extend (src/lib/schemas/ui/location.schema.ts)
-export const AddLocationFormSchema = LocationDbSchema.omit({
-  locationId: true, createdAt: true, updatedAt: true, status: true
-});
-```
+Examples (copyable)
+- Add a new page: create `src/routes/contact.tsx` with a default export component. `FileRoutes` will pick it up.
+- Link to a route: use `A` from `@solidjs/router` (see `about.tsx` usage).
 
-### Server Action Response Shape (MUST follow)
-```typescript
-{ success: boolean, data?: T, error?: string }
-```
+What not to change without extra context
+- Do not replace the `StartServer` document template in `src/entry-server.tsx` with custom document structure without checking server hosting needs.
+- Avoid changing `pnpm`/`vinxi` scripts unless adding clearly needed tasks (e.g., `test`).
 
-### locationCode Uniqueness
-Uses TransactWrite with lookup item `PK=LOCATION_CODE#<code>`. See `docs/ACCESS_PATTERNS.md`.
+If you need more info
+- Run the dev server locally to infer runtime behaviour: `pnpm install && pnpm run dev`.
+- Ask the repo owner which bundler/preset is intended for production (SolidStart supports multiple presets).
 
-### Google Places Autocomplete
-Address data MUST come from Places Autocomplete. Server validates `placeId` and coordinates.
+If you modify this file
+- Keep it concise and focused on repository-specific behaviors and commands.
 
-## Key developer workflows
-
-```bash
-pnpm install                    # Install dependencies
-pnpm db:local                   # Start DynamoDB Local (Docker)
-pnpm db:create-table            # Create table
-pnpm dev                        # Dev server at localhost:3000
-pnpm test                       # Run unit tests
-pnpm test:location              # Smoke test against DynamoDB Local
-```
-
-## Styling constraints (MUST follow)
-- **Light-mode only** — no `dark:` variants, no dark theme CSS variables
-- Use: `bg-white`, `text-gray-900`, `border-gray-200`
-- Use `cn()` utility from `src/lib/utils.ts` for conditional classes
-
-## Files to inspect
-
-| Task | Files |
-|------|-------|
-| Add entity | `src/lib/schemas/db/`, `src/server/db/repositories/`, `src/server/actions/` |
-| Add route | `src/routes/(protected)/` |
-| Add component | `src/components/`, use `src/components/ui/` base components |
-| DynamoDB patterns | `docs/ACCESS_PATTERNS.md`, `src/server/db/client.ts` |
-
-## What not to change
-- Do not add GSIs to DynamoDB
-- Do not use UUIDs (use ULID)
-- Do not duplicate DB schema fields in UI schemas (derive instead)
-- Do not add dark-mode styling
-- Do not allow freeform address entry (must use Places Autocomplete)
-
-## Future integration placeholders (TODOs in code)
-- Authentication check in server actions
-- Role-based authorization
-- Server-side Google Places verification
-
+---
+Please review and tell me which areas you'd like expanded (tests, CI, deploy presets, or component conventions).

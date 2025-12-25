@@ -10,11 +10,10 @@
     "allowJs": true,
     "noEmit": true,
     "strict": true,
-    "types": ["vinxi/types/client", "node", "@types/google.maps"],
+    "types": ["vinxi/types/client"],
     "isolatedModules": true,
     "paths": {
       "~/*": ["./src/*"]
     }
-  },
-  "include": ["src/**/*", "scripts/**/*", "tests/**/*"]
+  }
 }
