@@ -1,5 +1,6 @@
 /**
  * Google Places Autocomplete Component
+ * Uses solid-ui Combobox with Google Places API
  * * Optimized for @googlemaps/js-api-loader v2.0.2
  * Uses the functional API: setOptions() and importLibrary()
  */
@@ -7,6 +8,15 @@
 import { createSignal, onMount, type Component, Show } from "solid-js";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { cn } from "~/lib/utils";
+import { Search, X } from "lucide-solid";
+import {
+  Combobox,
+  ComboboxControl,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxItemLabel,
+} from "~/components/ui/combobox";
 
 // Types remain consistent with your existing schema
 export interface PlaceDetails {
@@ -37,7 +47,6 @@ export interface GooglePlaceSearchProps {
 
 /**
  * Extracts structured address data from the Google Place object.
- * This version uses reduce for a more compact implementation.
  */
 function extractAddressComponents(
   place: google.maps.places.Place
@@ -63,103 +72,170 @@ function extractAddressComponents(
     countryCode: getShort("country"),
   };
 
-  // Return undefined if no fields were extracted to avoid sending an empty object
   return Object.values(result).some((v) => v !== undefined)
     ? result
     : undefined;
 }
 
 export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
-  let containerRef: HTMLDivElement | undefined;
-  const [isLoaded, setIsLoaded] = createSignal(false);
+  const [placePredictions, setPlacePredictions] = createSignal<{ value: string; label: string; suggestion: any }[]>([]);
+  const [selectedOption, setSelectedOption] = createSignal<{ value: string; label: string; suggestion: any } | null>(null);
+  const [inputValue, setInputValue] = createSignal(props.initialValue || "");
+  const [isLoading, setIsLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
 
   onMount(async () => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       setError("VITE_GOOGLE_MAPS_API_KEY is missing.");
+      setIsLoading(false);
       return;
     }
 
     try {
       // Use a single config object for the loader
       setOptions({ key: apiKey, v: "weekly" });
+      
+      // Import the places library
+      await importLibrary("places");
 
-      // Destructure to get the web component class
-      const { PlaceAutocompleteElement } = (await importLibrary(
-        "places"
-      )) as google.maps.PlacesLibrary;
-
-      if (!containerRef || !PlaceAutocompleteElement) {
-        throw new Error("Places Library or container failed to load.");
-      }
-
-      // Create and configure the web component instance
-      const autocompleteInstance = new PlaceAutocompleteElement();
-      autocompleteInstance.classList.add("w-full");
-      if (props.placeholder) autocompleteInstance.placeholder = props.placeholder;
-      if (props.initialValue) autocompleteInstance.value = props.initialValue;
-
-      // Event: User selects a place
-      autocompleteInstance.addEventListener("gmp-select", async (event: any) => {
-        const place = event.detail?.place ?? event.placePrediction?.toPlace();
-
-        if (!place) {
-          console.error("[gmp-select] Could not find place data in the event object.");
-          return;
-        }
-        
-        // The place object needs to have its fields fetched.
-        await place.fetchFields({
-          fields: ["id", "location", "formattedAddress", "addressComponents", "displayName"],
-        });
-
-        if (place.id && place.location) {
-          props.onPlaceSelect({
-            placeId: place.id,
-            formattedAddress: place.formattedAddress || place.displayName || "",
-            lat: place.location.lat(),
-            lng: place.location.lng(),
-            addressComponents: extractAddressComponents(place),
-          });
-          setError(null);
-        } else {
-          console.warn("[gmp-select] Place is missing ID or location after fetching fields.");
-        }
-      });
-
-      // Append the instance to the container
-      containerRef.appendChild(autocompleteInstance);
-
-      // Handle the internal input for the clear event.
-      const internalInput = autocompleteInstance.querySelector("input");
-      internalInput?.addEventListener("input", () => {
-        if (internalInput.value === "") {
-          props.onClear?.();
-        }
-      });
-
-      setIsLoaded(true);
+      setIsLoading(false);
     } catch (err) {
       console.error("Google Places API Error:", err);
       setError("Failed to load Google Places service.");
+      setIsLoading(false);
     }
   });
 
+  const handleInputChange = async (value: string) => {
+    setInputValue(value);
+
+    if (!value.trim()) {
+      setPlacePredictions([]);
+      props.onClear?.();
+      return;
+    }
+
+    try {
+      // Fetch suggestions using the new AutocompleteSuggestion API
+      const request = { input: value };
+      const { suggestions } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+
+      if (suggestions && suggestions.length > 0) {
+        setPlacePredictions(
+          suggestions.map((suggestion) => ({
+            value: suggestion.placePrediction?.placeId || "",
+            label: suggestion.placePrediction?.text?.toString() || "",
+            suggestion: suggestion,
+          }))
+        );
+      } else {
+        setPlacePredictions([]);
+      }
+    } catch (err) {
+      console.error("Autocomplete suggestions failed:", err);
+      setPlacePredictions([]);
+    }
+  };
+
+  const handleSelectionChange = async (option: { value: string; label: string; suggestion: any } | null) => {
+    if (!option) {
+      setInputValue("");
+      return;
+    }
+
+    setSelectedOption(option);
+    setInputValue(option.label);
+
+    try {
+      // Convert suggestion to Place and fetch details
+      const place = option.suggestion.placePrediction?.toPlace();
+      
+      if (!place) {
+        console.error("Could not convert suggestion to place");
+        return;
+      }
+
+      // Fetch place details using the new Place API
+      await place.fetchFields({
+        fields: ["id", "location", "formattedAddress", "addressComponents", "displayName"],
+      });
+
+      if (place.id && place.location) {
+        props.onPlaceSelect({
+          placeId: place.id,
+          formattedAddress: place.formattedAddress || place.displayName || "",
+          lat: place.location.lat(),
+          lng: place.location.lng(),
+          addressComponents: extractAddressComponents(place),
+        });
+        setError(null);
+      } else {
+        console.warn("Place is missing ID or location after fetching fields.");
+      }
+    } catch (err) {
+      console.error("Failed to get place details:", err);
+    }
+  };
+
+  const handleClear = () => {
+    setInputValue("");
+    setSelectedOption(null);
+    setPlacePredictions([]);
+    props.onClear?.();
+  };
+
   return (
     <div class={cn("relative w-full", props.class)}>
-      <div
-        ref={containerRef}
-        class={cn(props.disabled && "opacity-50 pointer-events-none")}
-      />
+      <Combobox<{ value: string; label: string; suggestion: any }>
+        options={placePredictions()}
+        inputValue={inputValue()}
+        onInputChange={handleInputChange}
+        onChange={handleSelectionChange}
+        placeholder={props.placeholder || "Search for a place..."}
+        optionValue="value"
+        optionTextValue="label"
+        defaultFilter={() => true}
+        disabled={props.disabled || isLoading()}
+        itemComponent={(itemProps) => (
+          <ComboboxItem item={itemProps.item}>
+            <ComboboxItemLabel>{itemProps.item.rawValue.label}</ComboboxItemLabel>
+          </ComboboxItem>
+        )}
+      >
+        <ComboboxControl
+          class={cn(
+            "flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2",
+            "text-sm text-gray-900",
+            "focus-within:outline-none focus-within:ring-2 focus-within:ring-gray-400 focus-within:ring-offset-2"
+          )}
+        >
+          <div class="flex items-center gap-2 flex-1">
+            <Search size={16} class="text-gray-500 flex-shrink-0" />
+            <ComboboxInput class="flex-1 bg-transparent outline-none py-0 placeholder:text-gray-500" />
+          </div>
+          <Show when={(selectedOption() || inputValue()) && !props.disabled && !isLoading()}>
+            <button
+              type="button"
+              onClick={handleClear}
+              class="text-gray-500 hover:text-gray-700 focus:outline-none flex-shrink-0"
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          </Show>
+        </ComboboxControl>
+        <ComboboxContent class="bg-white border border-gray-200 shadow-lg" />
+      </Combobox>
 
       <Show when={error()}>
         <p class="mt-1 text-xs text-red-500">{error()}</p>
       </Show>
 
-      {/* Loading Placeholder */}
-      <Show when={!isLoaded() && !error()}>
-        <div class="h-10 w-full animate-pulse bg-gray-100 rounded-md border border-gray-200" />
+      <Show when={isLoading()}>
+        <div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md">
+          <div class="h-5 w-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        </div>
       </Show>
     </div>
   );

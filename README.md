@@ -96,7 +96,7 @@ src/
 │   │   └── ...
 │   ├── AddLocationDialog.tsx  # Location creation dialog
 │   ├── GooglePlaceSearch.tsx  # Google Places integration
-│   └── LocationsTable.tsx     # Locations list table
+│   └── (locations list handled by GenericCardList)     # Locations list UI
 ├── lib/
 │   ├── schemas/
 │   │   ├── db/                # DB schemas (source of truth)
@@ -204,7 +204,7 @@ All content pages must use the reusable `Card` wrapper:
 import { Card } from "~/components/ui/Card";
 
 <Card title="Locations" actions={<Button>Add</Button>}>
-  <LocationsTable locations={data} />
+  {/* Locations list handled by GenericCardList - see src/components/GenericCardList.tsx */}
 </Card>
 ```
 
