@@ -1,13 +1,16 @@
 /**
  * Google Places Autocomplete Component
  * 
- * Integrates with Google Places API (New) for location search.
+ * Integrates with Google Places API using the NEW PlaceAutocompleteElement.
+ * This is the recommended approach as of March 2025 (deprecates google.maps.places.Autocomplete).
+ * 
  * This is the ONLY allowed source of address/geolocation data at creation time.
  * Manual address entry is NOT permitted.
  * 
  * Requires VITE_GOOGLE_MAPS_API_KEY environment variable.
  * 
- * Reference: https://developers.google.com/maps/documentation/javascript/place-autocomplete-new
+ * Reference: https://developers.google.com/maps/documentation/javascript/place-autocomplete-element
+ * Migration guide: https://developers.google.com/maps/documentation/javascript/places-migration-overview
  * 
  * Usage:
  * <GooglePlaceSearch
@@ -17,7 +20,6 @@
  */
 
 import { createSignal, onMount, onCleanup, type Component, Show } from "solid-js";
-import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 
 /**
@@ -55,11 +57,13 @@ export interface GooglePlaceSearchProps {
 }
 
 /**
- * Extracts structured address components from Google Places API response.
+ * Extracts structured address components from the new Place API response.
+ * The new API uses different property names (longText/shortText instead of long_name/short_name).
  */
 function extractAddressComponents(
-  components: google.maps.places.AddressComponent[] | undefined
+  place: google.maps.places.Place
 ): PlaceDetails["addressComponents"] {
+  const components = place.addressComponents;
   if (!components) return undefined;
 
   const result: PlaceDetails["addressComponents"] = {};
@@ -68,19 +72,19 @@ function extractAddressComponents(
     const types = component.types;
 
     if (types.includes("street_number")) {
-      result.streetNumber = (component as any).long_name ?? (component as any).longText ?? undefined;
+      result.streetNumber = component.longText ?? component.shortText ?? undefined;
     } else if (types.includes("route")) {
-      result.route = (component as any).long_name ?? (component as any).longText ?? undefined;
+      result.route = component.longText ?? component.shortText ?? undefined;
     } else if (types.includes("locality")) {
-      result.city = (component as any).long_name ?? (component as any).longText ?? undefined;
+      result.city = component.longText ?? component.shortText ?? undefined;
     } else if (types.includes("administrative_area_level_1")) {
-      result.state = (component as any).long_name ?? (component as any).longText ?? undefined;
-      result.stateCode = (component as any).short_name ?? (component as any).shortText ?? undefined;
+      result.state = component.longText ?? undefined;
+      result.stateCode = component.shortText ?? undefined;
     } else if (types.includes("postal_code")) {
-      result.postalCode = (component as any).long_name ?? (component as any).longText ?? undefined;
+      result.postalCode = component.longText ?? component.shortText ?? undefined;
     } else if (types.includes("country")) {
-      result.country = (component as any).long_name ?? (component as any).longText ?? undefined;
-      result.countryCode = (component as any).short_name ?? (component as any).shortText ?? undefined;
+      result.country = component.longText ?? undefined;
+      result.countryCode = component.shortText ?? undefined;
     }
   }
 
@@ -88,8 +92,8 @@ function extractAddressComponents(
 }
 
 export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
-  let inputRef: HTMLInputElement | undefined;
-  let autocomplete: google.maps.places.Autocomplete | null = null;
+  let containerRef: HTMLDivElement | undefined;
+  let autocompleteElement: google.maps.places.PlaceAutocompleteElement | null = null;
 
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -104,36 +108,44 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
     }
 
     try {
-      // Load Google Maps script if not already loaded
-      if (!window.google?.maps?.places) {
-        await loadGoogleMapsScript(apiKey);
-      }
+      // Load Google Maps script with the new Places library
+      await loadGoogleMapsScript(apiKey);
 
-      if (!inputRef) return;
+      if (!containerRef) return;
 
-      // Initialize autocomplete
-      autocomplete = new google.maps.places.Autocomplete(inputRef, {
-        fields: ["place_id", "formatted_address", "geometry", "address_components"],
-        types: ["establishment", "geocode"],
+      // Create the new PlaceAutocompleteElement
+      // This is the recommended approach as of March 2025
+      autocompleteElement = new google.maps.places.PlaceAutocompleteElement({
+        // componentRestrictions: { country: "us" }, // Uncomment to restrict to specific country
       });
 
-      // Listen for place selection
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete?.getPlace();
+      // Style the autocomplete element to match our design
+      autocompleteElement.style.width = "100%";
+      autocompleteElement.setAttribute("placeholder", props.placeholder ?? "Search for a location...");
 
-        if (!place?.place_id || !place?.geometry?.location) {
+      // Append to container
+      containerRef.appendChild(autocompleteElement);
+
+      // Listen for place selection using the new 'gmp-placeselect' event
+      autocompleteElement.addEventListener("gmp-placeselect", async (event: any) => {
+        const place: google.maps.places.Place = event.place;
+
+        // Fetch additional place details (the element only returns basic info)
+        await place.fetchFields({
+          fields: ["displayName", "formattedAddress", "location", "addressComponents"],
+        });
+
+        if (!place.id || !place.location) {
           setError("Please select a valid location from the dropdown.");
           return;
         }
 
         const placeDetails: PlaceDetails = {
-          placeId: place.place_id,
-          formattedAddress: place.formatted_address || "",
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          addressComponents: extractAddressComponents(
-            place.address_components as unknown as google.maps.places.AddressComponent[]
-          ),
+          placeId: place.id,
+          formattedAddress: place.formattedAddress || place.displayName || "",
+          lat: place.location.lat(),
+          lng: place.location.lng(),
+          addressComponents: extractAddressComponents(place),
         };
 
         setSelectedPlace(placeDetails);
@@ -144,20 +156,24 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
       setIsLoaded(true);
     } catch (err) {
       console.error("Failed to load Google Places:", err);
-      setError("Failed to load Google Places. Please check your API key.");
+      setError("Failed to load Google Places. Please check your API key and ensure the Places API (New) is enabled.");
     }
   });
 
   onCleanup(() => {
-    if (autocomplete) {
-      google.maps.event.clearInstanceListeners(autocomplete);
+    if (autocompleteElement && containerRef?.contains(autocompleteElement)) {
+      containerRef.removeChild(autocompleteElement);
     }
   });
 
   const handleClear = () => {
     setSelectedPlace(null);
-    if (inputRef) {
-      inputRef.value = "";
+    // Clear the autocomplete input
+    if (autocompleteElement) {
+      const input = autocompleteElement.querySelector("input");
+      if (input) {
+        input.value = "";
+      }
     }
     props.onClear?.();
   };
@@ -165,21 +181,20 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
   return (
     <div class={cn("relative", props.class)}>
       <div class="relative">
-        <Input
-          ref={(el) => (inputRef = el)}
-          type="text"
-          placeholder={props.placeholder ?? "Search for a location..."}
-          disabled={props.disabled || !isLoaded()}
+        {/* Container for the PlaceAutocompleteElement */}
+        <div
+          ref={(el) => (containerRef = el)}
           class={cn(
-            "pr-10",
-            selectedPlace() && "border-green-500 bg-green-50"
+            "google-places-container",
+            selectedPlace() && "selected",
+            props.disabled && "opacity-50 pointer-events-none"
           )}
         />
         <Show when={selectedPlace()}>
           <button
             type="button"
             onClick={handleClear}
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 z-10"
             aria-label="Clear selection"
           >
             <svg
@@ -221,32 +236,50 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
 };
 
 /**
- * Loads the Google Maps JavaScript API script.
+ * Loads the Google Maps JavaScript API script using the recommended async pattern.
+ * Uses the new 'places' library which includes PlaceAutocompleteElement.
+ * 
+ * @see https://developers.google.com/maps/documentation/javascript/load-maps-js-api
  */
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (window.google?.maps?.places) {
+    // Check if already loaded
+    if (window.google?.maps?.places?.PlaceAutocompleteElement) {
       resolve();
       return;
     }
 
+    // Check for existing script (avoid duplicate loading)
     const existingScript = document.querySelector(
-      'script[src^="https://maps.googleapis.com/maps/api/js"]'
+      'script[src*="maps.googleapis.com/maps/api/js"]'
     );
     if (existingScript) {
-      existingScript.addEventListener("load", () => resolve());
-      existingScript.addEventListener("error", () =>
-        reject(new Error("Failed to load Google Maps"))
-      );
+      // Wait for it to load
+      if (window.google?.maps?.places?.PlaceAutocompleteElement) {
+        resolve();
+      } else {
+        existingScript.addEventListener("load", () => {
+          // Give a small delay for the API to initialize
+          setTimeout(() => resolve(), 100);
+        });
+        existingScript.addEventListener("error", () =>
+          reject(new Error("Failed to load Google Maps"))
+        );
+      }
       return;
     }
 
+    // Create and load script with async/defer for optimal performance
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    // Use the 'places' library which includes the new PlaceAutocompleteElement
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
 
-    script.onload = () => resolve();
+    script.onload = () => {
+      // Small delay to ensure API is fully initialized
+      setTimeout(() => resolve(), 100);
+    };
     script.onerror = () => reject(new Error("Failed to load Google Maps script"));
 
     document.head.appendChild(script);

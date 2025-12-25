@@ -2,18 +2,19 @@
  * Locations Page
  * 
  * Lists all locations with ability to add new ones.
- * Uses the reusable Card wrapper for consistent layout.
+ * Uses GenericCardList for responsive card grid layout.
  * 
  * TODO: Add auth check here when authentication is implemented
  */
 
 import { createSignal, createResource, Show, onMount } from "solid-js";
-import { Card } from "~/components/ui/Card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/components/ui/Card";
 import { Button } from "~/components/ui/button";
-import { LocationsTable } from "~/components/LocationsTable";
+import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
 import { getLocations } from "~/server/actions/locations";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
+import type { CardAction } from "~/lib/schemas/ui/card.schema";
 
 export default function LocationsPage() {
   // Track if we're on client side
@@ -41,50 +42,103 @@ export default function LocationsPage() {
     refetch();
   };
 
+  // Card actions for each location
+  const locationActions: CardAction<LocationUi>[] = [
+    {
+      label: "View",
+      onClick: (loc) => {
+        // TODO: Navigate to location detail page
+        console.log("View location:", loc.id);
+      },
+      variant: "outline",
+    },
+    {
+      label: "Edit",
+      onClick: (loc) => {
+        // TODO: Open edit dialog
+        console.log("Edit location:", loc.id);
+      },
+      variant: "outline",
+    },
+  ];
+
   return (
     <main class="container mx-auto py-8 px-4">
-      <Card
-        title="Locations"
-        description="Manage your organization's locations."
-      >
-        {/* Action Button - rendered only on client to avoid hydration mismatch */}
-        <Show when={isClient()}>
-          <div class="flex justify-end mb-4">
+      {/* Page Header */}
+      <div class="mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Locations</h1>
+            <p class="mt-1 text-gray-500">Manage your organization's locations.</p>
+          </div>
+          
+          {/* Action Button - rendered only on client to avoid hydration mismatch */}
+          <Show when={isClient()}>
             <Button onClick={() => setIsDialogOpen(true)}>
               Add Location
             </Button>
-          </div>
-        </Show>
+          </Show>
+        </div>
+      </div>
 
-        {/* Loading State */}
-        <Show when={locations.loading}>
-          <div class="py-8 text-center text-gray-500">
-            <p>Loading locations...</p>
-          </div>
-        </Show>
+      {/* Loading State */}
+      <Show when={locations.loading}>
+        <div class="py-12 text-center text-gray-500">
+          <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4" />
+          <p>Loading locations...</p>
+        </div>
+      </Show>
 
-        {/* Error State */}
-        <Show when={locations.error}>
-          <div class="rounded-md bg-red-50 p-4">
+      {/* Error State */}
+      <Show when={locations.error}>
+        <Card class="border-red-200 bg-red-50">
+          <CardContent class="pt-6">
             <p class="text-sm text-red-700">
               Failed to load locations: {locations.error?.message}
             </p>
             <Button
               variant="outline"
               size="sm"
-              class="mt-2"
+              class="mt-4"
               onClick={() => refetch()}
             >
               Retry
             </Button>
-          </div>
-        </Show>
+          </CardContent>
+        </Card>
+      </Show>
 
-        {/* Data State */}
-        <Show when={!locations.loading && !locations.error && locations()}>
-          <LocationsTable locations={locations()!} />
-        </Show>
-      </Card>
+      {/* Data State - Card Grid View */}
+      <Show when={!locations.loading && !locations.error && locations()}>
+        <GenericCardList<LocationUi>
+          items={locations()!}
+          title={(loc) => loc.name}
+          description={(loc) => loc.locationCode}
+          renderContent={(loc) => (
+            <div class="space-y-2 text-sm text-gray-600">
+              <Show when={loc.formattedAddress}>
+                <p class="flex items-start gap-2">
+                  <span class="text-gray-400">📍</span>
+                  <span class="line-clamp-2">{loc.formattedAddress}</span>
+                </p>
+              </Show>
+              <Show when={loc.lat && loc.lng}>
+                <p class="text-xs text-gray-400">
+                  {loc.lat?.toFixed(4)}, {loc.lng?.toFixed(4)}
+                </p>
+              </Show>
+            </div>
+          )}
+          actions={locationActions}
+          grid={{ md: 2, lg: 3 }}
+          emptyMessage="No locations found"
+          emptyAction={
+            <Button onClick={() => setIsDialogOpen(true)}>
+              Add your first location
+            </Button>
+          }
+        />
+      </Show>
 
       {/* Add Location Dialog - client only */}
       <Show when={isClient()}>

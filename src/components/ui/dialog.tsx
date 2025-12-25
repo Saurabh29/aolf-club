@@ -1,178 +1,141 @@
-/**
- * Dialog Components
- * 
- * Simple modal dialog using native HTML dialog element.
- * Light-mode only styling with Tailwind.
- * 
- * Usage:
- * <Dialog open={isOpen()} onOpenChange={setIsOpen}>
- *   <DialogContent>
- *     <DialogHeader>
- *       <DialogTitle>Add Location</DialogTitle>
- *       <DialogDescription>Fill in the details below.</DialogDescription>
- *     </DialogHeader>
- *     <div>Form content here</div>
- *     <DialogFooter>
- *       <Button>Save</Button>
- *     </DialogFooter>
- *   </DialogContent>
- * </Dialog>
- */
+import type { Component, ComponentProps, JSX, ValidComponent } from "solid-js"
+import { splitProps } from "solid-js"
 
-import { splitProps, type JSX, type Component, Show, createEffect, onCleanup } from "solid-js";
-import { Portal } from "solid-js/web";
-import { cn } from "~/lib/utils";
+import * as DialogPrimitive from "@kobalte/core/dialog"
+import type { PolymorphicProps } from "@kobalte/core/polymorphic"
 
-export interface DialogProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  children: JSX.Element;
-}
+import { cn } from "~/lib/utils"
 
-export const Dialog: Component<DialogProps> = (props) => {
-  // Handle escape key to close dialog
-  createEffect(() => {
-    if (props.open) {
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          props.onOpenChange?.(false);
-        }
-      };
-      document.addEventListener("keydown", handleEscape);
-      // Prevent body scroll when dialog is open
-      document.body.style.overflow = "hidden";
-      
-      onCleanup(() => {
-        document.removeEventListener("keydown", handleEscape);
-        document.body.style.overflow = "";
-      });
-    }
-  });
+const Dialog = DialogPrimitive.Root
+const DialogTrigger = DialogPrimitive.Trigger
 
+const DialogPortal: Component<DialogPrimitive.DialogPortalProps> = (props) => {
+  const [, rest] = splitProps(props, ["children"])
   return (
-    <Show when={props.open}>
-      <Portal>
+    <DialogPrimitive.Portal {...rest}>
+      <div class="fixed inset-0 z-50 flex items-start justify-center sm:items-center">
         {props.children}
-      </Portal>
-    </Show>
-  );
-};
-
-export interface DialogContentProps extends JSX.HTMLAttributes<HTMLDivElement> {
-  onClose?: () => void;
+      </div>
+    </DialogPrimitive.Portal>
+  )
 }
 
-export const DialogContent: Component<DialogContentProps> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children", "onClose"]);
+type DialogOverlayProps<T extends ValidComponent = "div"> =
+  DialogPrimitive.DialogOverlayProps<T> & { class?: string | undefined }
 
-  const handleOverlayClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      local.onClose?.();
-    }
-  };
-
+const DialogOverlay = <T extends ValidComponent = "div">(
+  props: PolymorphicProps<T, DialogOverlayProps<T>>
+) => {
+  const [, rest] = splitProps(props as DialogOverlayProps, ["class"])
   return (
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={handleOverlayClick}
-    >
-      {/* Overlay */}
-      <div class="fixed inset-0 bg-black/50" aria-hidden="true" />
-      
-      {/* Content */}
-      <div
-        role="dialog"
-        aria-modal="true"
+    <DialogPrimitive.Overlay
+      class={cn(
+        "fixed inset-0 z-50 bg-background/80 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
+        props.class
+      )}
+      {...rest}
+    />
+  )
+}
+
+type DialogContentProps<T extends ValidComponent = "div"> =
+  DialogPrimitive.DialogContentProps<T> & {
+    class?: string | undefined
+    children?: JSX.Element
+  }
+
+const DialogContent = <T extends ValidComponent = "div">(
+  props: PolymorphicProps<T, DialogContentProps<T>>
+) => {
+  const [, rest] = splitProps(props as DialogContentProps, ["class", "children"])
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
         class={cn(
-          "relative z-50 w-full max-w-lg mx-4",
-          "rounded-lg border border-gray-200 bg-white p-6 shadow-lg",
-          local.class
+          "fixed left-1/2 top-1/2 z-50 grid max-h-screen w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 data-[closed]:slide-out-to-left-1/2 data-[closed]:slide-out-to-top-[48%] data-[expanded]:slide-in-from-left-1/2 data-[expanded]:slide-in-from-top-[48%] sm:rounded-lg",
+          props.class
         )}
         {...rest}
       >
-        {local.children}
-        <button
-          type="button"
-          onClick={() => local.onClose?.()}
-          class={cn(
-            "absolute right-4 top-4 rounded-sm opacity-70 transition-opacity",
-            "hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-          )}
-          aria-label="Close"
-        >
+        {props.children}
+        <DialogPrimitive.CloseButton class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[expanded]:bg-accent data-[expanded]:text-muted-foreground">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="h-4 w-4"
+            class="size-4"
           >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
+            <path d="M18 6l-12 12" />
+            <path d="M6 6l12 12" />
           </svg>
-        </button>
-      </div>
-    </div>
-  );
-};
+          <span class="sr-only">Close</span>
+        </DialogPrimitive.CloseButton>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  )
+}
 
-export interface DialogHeaderProps extends JSX.HTMLAttributes<HTMLDivElement> {}
+const DialogHeader: Component<ComponentProps<"div">> = (props) => {
+  const [, rest] = splitProps(props, ["class"])
+  return (
+    <div class={cn("flex flex-col space-y-1.5 text-center sm:text-left", props.class)} {...rest} />
+  )
+}
 
-export const DialogHeader: Component<DialogHeaderProps> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
-
+const DialogFooter: Component<ComponentProps<"div">> = (props) => {
+  const [, rest] = splitProps(props, ["class"])
   return (
     <div
-      class={cn("flex flex-col space-y-1.5 text-center sm:text-left", local.class)}
+      class={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", props.class)}
       {...rest}
-    >
-      {local.children}
-    </div>
-  );
-};
+    />
+  )
+}
 
-export const DialogTitle: Component<JSX.HTMLAttributes<HTMLHeadingElement>> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
+type DialogTitleProps<T extends ValidComponent = "h2"> = DialogPrimitive.DialogTitleProps<T> & {
+  class?: string | undefined
+}
 
+const DialogTitle = <T extends ValidComponent = "h2">(
+  props: PolymorphicProps<T, DialogTitleProps<T>>
+) => {
+  const [, rest] = splitProps(props as DialogTitleProps, ["class"])
   return (
-    <h2
-      class={cn("text-lg font-semibold text-gray-900 leading-none tracking-tight", local.class)}
+    <DialogPrimitive.Title
+      class={cn("text-lg font-semibold leading-none tracking-tight", props.class)}
       {...rest}
-    >
-      {local.children}
-    </h2>
-  );
-};
+    />
+  )
+}
 
-export const DialogDescription: Component<JSX.HTMLAttributes<HTMLParagraphElement>> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
+type DialogDescriptionProps<T extends ValidComponent = "p"> =
+  DialogPrimitive.DialogDescriptionProps<T> & {
+    class?: string | undefined
+  }
 
+const DialogDescription = <T extends ValidComponent = "p">(
+  props: PolymorphicProps<T, DialogDescriptionProps<T>>
+) => {
+  const [, rest] = splitProps(props as DialogDescriptionProps, ["class"])
   return (
-    <p
-      class={cn("text-sm text-gray-600 mt-1", local.class)}
+    <DialogPrimitive.Description
+      class={cn("text-sm text-muted-foreground", props.class)}
       {...rest}
-    >
-      {local.children}
-    </p>
-  );
-};
+    />
+  )
+}
 
-export interface DialogFooterProps extends JSX.HTMLAttributes<HTMLDivElement> {}
-
-export const DialogFooter: Component<DialogFooterProps> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
-
-  return (
-    <div
-      class={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6", local.class)}
-      {...rest}
-    >
-      {local.children}
-    </div>
-  );
-};
+export {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription
+}
