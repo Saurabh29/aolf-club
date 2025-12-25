@@ -37,6 +37,7 @@ export interface GooglePlaceSearchProps {
 
 /**
  * Extracts structured address data from the Google Place object.
+ * This version uses reduce for a more compact implementation.
  */
 function extractAddressComponents(
   place: google.maps.places.Place
@@ -44,27 +45,28 @@ function extractAddressComponents(
   const components = place.addressComponents;
   if (!components) return undefined;
 
-  const result: PlaceDetails["addressComponents"] = {};
+  const componentMap = new Map(
+    components.flatMap((c) => c.types.map((t) => [t, c]))
+  );
 
-  for (const component of components) {
-    const types = component.types;
-    if (types.includes("street_number")) {
-      result.streetNumber = component.longText;
-    } else if (types.includes("route")) {
-      result.route = component.longText;
-    } else if (types.includes("locality")) {
-      result.city = component.longText;
-    } else if (types.includes("administrative_area_level_1")) {
-      result.state = component.longText;
-      result.stateCode = component.shortText;
-    } else if (types.includes("postal_code")) {
-      result.postalCode = component.longText;
-    } else if (types.includes("country")) {
-      result.country = component.longText;
-      result.countryCode = component.shortText;
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
+  const get = (key: string) => componentMap.get(key)?.longText ?? undefined;
+  const getShort = (key: string) => componentMap.get(key)?.shortText ?? undefined;
+
+  const result: PlaceDetails["addressComponents"] = {
+    streetNumber: get("street_number"),
+    route: get("route"),
+    city: get("locality"),
+    state: get("administrative_area_level_1"),
+    stateCode: getShort("administrative_area_level_1"),
+    postalCode: get("postal_code"),
+    country: get("country"),
+    countryCode: getShort("country"),
+  };
+
+  // Return undefined if no fields were extracted to avoid sending an empty object
+  return Object.values(result).some((v) => v !== undefined)
+    ? result
+    : undefined;
 }
 
 export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
@@ -72,81 +74,75 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
   onMount(async () => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       setError("VITE_GOOGLE_MAPS_API_KEY is missing.");
       return;
     }
 
     try {
-      /**
-       * V2 CORRECT USAGE:
-       * 1. setOptions uses 'key' instead of 'apiKey'.
-       * 2. This creates the global google.maps.importLibrary function.
-       */
-      setOptions({
-        key: apiKey,
-        v: "weekly" // Correct version parameter is 'v'
-      });
+      // Use a single config object for the loader
+      setOptions({ key: apiKey, v: "weekly" });
 
-      // 3. Load the library. importLibrary handles waiting for the script.
+      // Destructure to get the web component class
       const { PlaceAutocompleteElement } = (await importLibrary(
         "places"
       )) as google.maps.PlacesLibrary;
 
-      if (!containerRef) return;
-
-      // 4. Create the Web Component instance
-      const autocompleteInstance = new PlaceAutocompleteElement();
-      autocompleteInstance.classList.add("w-full");
-      
-      if (props.placeholder) {
-        autocompleteInstance.setAttribute("placeholder", props.placeholder);
+      if (!containerRef || !PlaceAutocompleteElement) {
+        throw new Error("Places Library or container failed to load.");
       }
 
-      // Event: User selects a place from suggestions
-      autocompleteInstance.addEventListener("gmp-select", async (event: any) => {
-        const placePrediction = event.placePrediction;
-        if (!placePrediction) return;
+      // Create and configure the web component instance
+      const autocompleteInstance = new PlaceAutocompleteElement();
+      autocompleteInstance.classList.add("w-full");
+      if (props.placeholder) autocompleteInstance.placeholder = props.placeholder;
+      if (props.initialValue) autocompleteInstance.value = props.initialValue;
 
-        const place = placePrediction.toPlace();
+      // Event: User selects a place
+      autocompleteInstance.addEventListener("gmp-select", async (event: any) => {
+        const place = event.detail?.place ?? event.placePrediction?.toPlace();
+
+        if (!place) {
+          console.error("[gmp-select] Could not find place data in the event object.");
+          return;
+        }
         
-        // Fetch only specific fields to keep costs down
+        // The place object needs to have its fields fetched.
         await place.fetchFields({
           fields: ["id", "location", "formattedAddress", "addressComponents", "displayName"],
         });
 
         if (place.id && place.location) {
-          const details: PlaceDetails = {
+          props.onPlaceSelect({
             placeId: place.id,
             formattedAddress: place.formattedAddress || place.displayName || "",
             lat: place.location.lat(),
             lng: place.location.lng(),
             addressComponents: extractAddressComponents(place),
-          };
-          props.onPlaceSelect(details);
+          });
           setError(null);
+        } else {
+          console.warn("[gmp-select] Place is missing ID or location after fetching fields.");
         }
       });
 
-      containerRef.appendChild(autocompleteInstance as unknown as Node);
+      // Append the instance to the container
+      containerRef.appendChild(autocompleteInstance);
 
-      // Handle the internal input for pre-population or clearing
-      const internalInput = autocompleteInstance.querySelector("input") as HTMLInputElement;
-      if (internalInput) {
-        if (props.initialValue) internalInput.value = props.initialValue;
-        
-        internalInput.addEventListener("input", () => {
-          if (internalInput.value === "") props.onClear?.();
-        });
-      }
+      // Handle the internal input for the clear event.
+      const internalInput = autocompleteInstance.querySelector("input");
+      internalInput?.addEventListener("input", () => {
+        if (internalInput.value === "") {
+          props.onClear?.();
+        }
+      });
 
       setIsLoaded(true);
     } catch (err) {
       console.error("Google Places API Error:", err);
-      setError("Failed to load search service.");
+      setError("Failed to load Google Places service.");
     }
   });
 
