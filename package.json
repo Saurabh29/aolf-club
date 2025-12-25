@@ -1,12 +1,20 @@
 {
-  "name": "example-with-tailwindcss",
+  "name": "aolf-club-locations",
   "type": "module",
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
-    "start": "vinxi start"
+    "start": "vinxi start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:location": "tsx scripts/test-location-creation.ts",
+    "db:local": "docker run -d -p 8000:8000 amazon/dynamodb-local",
+    "db:create-table": "tsx scripts/create-local-table.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.525.0",
+    "@aws-sdk/lib-dynamodb": "^3.525.0",
+    "@googlemaps/js-api-loader": "^1.16.6",
     "@solidjs/router": "^0.15.0",
     "@solidjs/start": "^1.1.0",
     "class-variance-authority": "^0.7.1",
@@ -14,11 +22,18 @@
     "solid-js": "^1.9.5",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "vinxi": "^0.5.7"
+    "ulid": "^2.3.0",
+    "vinxi": "^0.5.7",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.7",
-    "tailwindcss": "^4.0.7"
+    "@types/google.maps": "^3.55.0",
+    "@types/node": "^20.11.0",
+    "tailwindcss": "^4.0.7",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   },
   "engines": {
     "node": ">=22"
