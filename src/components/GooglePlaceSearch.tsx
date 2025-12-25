@@ -109,42 +109,50 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
     }
 
     try {
-      // Load Google Maps script with the new Places library
+      // Load the Google Maps bootstrap script (typed and safe)
       await loadGoogleMapsScript(apiKey);
+
+      // Dynamically import the 'places' library using importLibrary if available.
+      // Type definitions for the new API may be missing, so cast to any.
+      const placesLib = (google.maps as any).importLibrary
+        ? await (google.maps as any).importLibrary("places")
+        : (google.maps as any).places;
+      const PlaceAutocompleteElement = placesLib?.PlaceAutocompleteElement as any;
 
       if (!containerRef) return;
 
-      // Create the new PlaceAutocompleteElement
-      // This is the recommended approach as of March 2025
-      autocompleteElement = new google.maps.places.PlaceAutocompleteElement({
-        // componentRestrictions: { country: "us" }, // Uncomment to restrict to specific country
+      autocompleteElement = new PlaceAutocompleteElement({
+        // componentRestrictions: { country: "us" }, 
       });
 
-      // Style the autocomplete element to match our design
+      if (!autocompleteElement) {
+        setError("Failed to create PlaceAutocompleteElement.");
+        return;
+      }
+
       autocompleteElement.style.width = "100%";
       autocompleteElement.setAttribute("placeholder", props.placeholder ?? "Search for a location...");
 
-      // Append to container
-      containerRef.appendChild(autocompleteElement);
+      containerRef.appendChild(autocompleteElement as unknown as Node);
 
-      // Listen for place selection using the 'gmp-select' event
-      autocompleteElement.addEventListener("gmp-select", async (event: any) => {
-        const { placePrediction } = event;
+      // Listen for the 'gmp-select' event, which fires when a user selects a place.
+      autocompleteElement.addEventListener("gmp-select", async (event: Event) => {
+        // The event currently provides `placePrediction` directly on the event object.
+        const placePrediction = (event as unknown as { placePrediction?: any }).placePrediction;
+
         if (!placePrediction) {
-          setError("Invalid place selection");
+          setError("Please select a valid location from the list.");
           return;
         }
 
-        // Convert prediction to Place object
         const place = placePrediction.toPlace();
 
-        // Fetch additional place details
         await place.fetchFields({
           fields: ["displayName", "formattedAddress", "location", "addressComponents", "id"],
         });
 
         if (!place.id || !place.location) {
-          setError("Please select a valid location from the dropdown.");
+          setError("Selected location is missing required details.");
           return;
         }
 
@@ -161,59 +169,40 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
         props.onPlaceSelect(placeDetails);
       });
 
-      // Monitor input changes to detect when user clears the field
-      checkInputCleared = () => {
-        const input = autocompleteElement?.querySelector("input");
-        if (input && input.value === "" && selectedPlace()) {
-          setSelectedPlace(null);
-          props.onClear?.();
-        }
-      };
-
-      // Use MutationObserver to watch for input value changes
       const input = autocompleteElement.querySelector("input");
       if (input) {
-        input.addEventListener("input", checkInputCleared);
+        checkInputCleared = () => {
+          if (input.value === "" && selectedPlace()) {
+            setSelectedPlace(null);
+            props.onClear?.();
+          }
+        };
+        input.addEventListener("input", checkInputCleared as EventListener);
       }
 
       setIsLoaded(true);
     } catch (err) {
-      console.error("Failed to load Google Places:", err);
-      setError("Failed to load Google Places. Please check your API key and ensure the Places API (New) is enabled.");
+      console.error("Failed to initialize Google Places:", err);
+      setError("Failed to load Google Places. Check API key and network.");
     }
   });
 
   onCleanup(() => {
-    if (autocompleteElement && containerRef?.contains(autocompleteElement)) {
-      // Clean up event listener
+    if (autocompleteElement) {
       const input = autocompleteElement.querySelector("input");
       if (input && checkInputCleared) {
         input.removeEventListener("input", checkInputCleared);
       }
-      containerRef.removeChild(autocompleteElement);
+      // The bootstrap loader and SolidJS handle script and element cleanup.
     }
   });
 
-  const handleClear = () => {
-    setSelectedPlace(null);
-    // Clear the autocomplete input
-    if (autocompleteElement) {
-      const input = autocompleteElement.querySelector("input");
-      if (input) {
-        input.value = "";
-      }
-    }
-    props.onClear?.();
-  };
-
   return (
     <div class={cn("relative", props.class)}>
-      {/* Container for the PlaceAutocompleteElement */}
       <div
         ref={(el) => (containerRef = el)}
         class={cn(
           "google-places-container",
-          selectedPlace() && "selected",
           props.disabled && "opacity-50 pointer-events-none"
         )}
       />
@@ -229,52 +218,41 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
   );
 };
 
+// The bootstrap loader handles script loading, so the old function is no longer needed.
 /**
- * Loads the Google Maps JavaScript API script using the recommended async pattern.
- * Uses the new 'places' library which includes PlaceAutocompleteElement.
- * 
- * @see https://developers.google.com/maps/documentation/javascript/load-maps-js-api
+ * Typed loader for Google Maps bootstrap script. Ensures `google.maps.importLibrary`
+ * is available before resolving. Uses `v=beta` to ensure PlaceAutocompleteElement
+ * is available in environments where it's in beta.
  */
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (window.google?.maps?.places?.PlaceAutocompleteElement) {
+    if ((window as any).google?.maps?.importLibrary) {
       resolve();
       return;
     }
 
-    // Check for existing script (avoid duplicate loading)
-    const existingScript = document.querySelector(
-      'script[src*="maps.googleapis.com/maps/api/js"]'
-    );
-    if (existingScript) {
-      // Wait for it to load
-      if (window.google?.maps?.places?.PlaceAutocompleteElement) {
-        resolve();
-      } else {
-        existingScript.addEventListener("load", () => {
-          // Give a small delay for the API to initialize
-          setTimeout(() => resolve(), 100);
-        });
-        existingScript.addEventListener("error", () =>
-          reject(new Error("Failed to load Google Maps"))
-        );
-      }
+    const scriptId = "google-maps-bootstrap";
+    if (document.getElementById(scriptId)) {
+      // Wait for existing script to initialize the API
+      const existing = document.getElementById(scriptId) as HTMLScriptElement;
+      existing.addEventListener("load", () => {
+        // small delay to let the API attach
+        setTimeout(() => resolve(), 50);
+      });
+      existing.addEventListener("error", (e) => reject(e));
       return;
     }
 
-    // Create and load script with async/defer for optimal performance
     const script = document.createElement("script");
-    // Use the 'places' library which includes the new PlaceAutocompleteElement
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&loading=async`;
     script.async = true;
     script.defer = true;
 
     script.onload = () => {
-      // Small delay to ensure API is fully initialized
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 50);
     };
-    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    script.onerror = (e) => reject(new Error("Failed to load Google Maps script"));
 
     document.head.appendChild(script);
   });
