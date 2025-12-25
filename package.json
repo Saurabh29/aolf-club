@@ -1,24 +1,40 @@
 {
-  "name": "example-with-tailwindcss",
+  "name": "aolf-club",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
-    "start": "vinxi start"
+    "start": "vinxi start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:test": "tsx scripts/test-db-connection.ts",
+    "db:create-table": "tsx scripts/create-table.ts"
   },
   "dependencies": {
-    "@solidjs/router": "^0.15.0",
+    "@aws-sdk/client-dynamodb": "^3.705.0",
+    "@aws-sdk/lib-dynamodb": "^3.705.0",
+    "@kobalte/core": "^0.13.7",
+    "@solidjs/router": "^0.15.3",
     "@solidjs/start": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "solid-js": "^1.9.5",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "vinxi": "^0.5.7"
+    "ulid": "^2.3.0",
+    "vinxi": "^0.5.7",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.7",
-    "tailwindcss": "^4.0.7"
+    "@types/google.maps": "^3.58.1",
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7",
+    "tailwindcss": "^4.0.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=22"
