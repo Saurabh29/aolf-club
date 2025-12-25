@@ -37,6 +37,8 @@ export interface AddLocationDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Callback when a location is successfully created */
   onSuccess?: (location: LocationUi) => void;
+  /** When editing an existing location, prevent editing the locationCode */
+  readOnlyLocationCode?: boolean;
 }
 
 export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
@@ -92,6 +94,17 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
       return false;
     }
 
+    return true;
+  };
+
+  /**
+   * Validate the form without setting UI error messages (used for button enablement)
+   */
+  const isFormValid = (): boolean => {
+    if (!name().trim()) return false;
+    if (!locationCode() || locationCode().length < 6) return false;
+    if (!/^[a-z0-9-]{6,50}$/.test(locationCode())) return false;
+    if (!placeDetails()) return false;
     return true;
   };
 
@@ -199,8 +212,11 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
               value={locationCode()}
               onInput={(e) => handleLocationCodeChange(e.currentTarget.value)}
               placeholder="e.g., austin-main-01"
-              disabled={isSaving()}
-              class={cn(codeError() && "border-red-500")}
+              disabled={isSaving() || props.readOnlyLocationCode}
+              class={cn(
+                props.readOnlyLocationCode && "bg-gray-100 cursor-not-allowed",
+                codeError() && "border-red-500"
+              )}
               required
             />
             <Show when={codeError()}>
@@ -214,11 +230,22 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
           {/* Google Places Search */}
           <div class="space-y-2">
             <Label>Location Address *</Label>
-            <GooglePlaceSearch
-              onPlaceSelect={setPlaceDetails}
-              onClear={() => setPlaceDetails(null)}
-              placeholder="Search for an address..."
-              disabled={isSaving()}
+            <div class="border border-gray-200 rounded-md p-2">
+              <GooglePlaceSearch
+                onPlaceSelect={(p) => setPlaceDetails(p)}
+                onClear={() => setPlaceDetails(null)}
+                placeholder="Search for an address..."
+                disabled={isSaving()}
+                class="w-full"
+              />
+            </div>
+            {/* Readonly textbox showing selected place (useful for edit flows) */}
+            <input
+              type="text"
+              readonly
+              value={placeDetails()?.formattedAddress ?? ""}
+              class="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+              placeholder="Selected location will appear here after choosing from the dropdown"
             />
             <p class="text-xs text-gray-500">
               You must select a location from the autocomplete dropdown.
@@ -243,7 +270,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
             </Button>
             <Button
               type="submit"
-              disabled={isSaving() || !placeDetails()}
+              disabled={isSaving() || !isFormValid()}
             >
               {isSaving() ? "Creating..." : "Create Location"}
             </Button>

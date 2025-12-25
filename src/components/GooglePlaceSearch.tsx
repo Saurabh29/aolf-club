@@ -94,6 +94,7 @@ function extractAddressComponents(
 export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
   let containerRef: HTMLDivElement | undefined;
   let autocompleteElement: google.maps.places.PlaceAutocompleteElement | null = null;
+  let checkInputCleared: (() => void) | undefined;
 
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -126,13 +127,20 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
       // Append to container
       containerRef.appendChild(autocompleteElement);
 
-      // Listen for place selection using the new 'gmp-placeselect' event
-      autocompleteElement.addEventListener("gmp-placeselect", async (event: any) => {
-        const place: google.maps.places.Place = event.place;
+      // Listen for place selection using the 'gmp-select' event
+      autocompleteElement.addEventListener("gmp-select", async (event: any) => {
+        const { placePrediction } = event;
+        if (!placePrediction) {
+          setError("Invalid place selection");
+          return;
+        }
 
-        // Fetch additional place details (the element only returns basic info)
+        // Convert prediction to Place object
+        const place = placePrediction.toPlace();
+
+        // Fetch additional place details
         await place.fetchFields({
-          fields: ["displayName", "formattedAddress", "location", "addressComponents"],
+          fields: ["displayName", "formattedAddress", "location", "addressComponents", "id"],
         });
 
         if (!place.id || !place.location) {
@@ -153,6 +161,21 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
         props.onPlaceSelect(placeDetails);
       });
 
+      // Monitor input changes to detect when user clears the field
+      checkInputCleared = () => {
+        const input = autocompleteElement?.querySelector("input");
+        if (input && input.value === "" && selectedPlace()) {
+          setSelectedPlace(null);
+          props.onClear?.();
+        }
+      };
+
+      // Use MutationObserver to watch for input value changes
+      const input = autocompleteElement.querySelector("input");
+      if (input) {
+        input.addEventListener("input", checkInputCleared);
+      }
+
       setIsLoaded(true);
     } catch (err) {
       console.error("Failed to load Google Places:", err);
@@ -162,6 +185,11 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
 
   onCleanup(() => {
     if (autocompleteElement && containerRef?.contains(autocompleteElement)) {
+      // Clean up event listener
+      const input = autocompleteElement.querySelector("input");
+      if (input && checkInputCleared) {
+        input.removeEventListener("input", checkInputCleared);
+      }
       containerRef.removeChild(autocompleteElement);
     }
   });
@@ -180,40 +208,15 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
 
   return (
     <div class={cn("relative", props.class)}>
-      <div class="relative">
-        {/* Container for the PlaceAutocompleteElement */}
-        <div
-          ref={(el) => (containerRef = el)}
-          class={cn(
-            "google-places-container",
-            selectedPlace() && "selected",
-            props.disabled && "opacity-50 pointer-events-none"
-          )}
-        />
-        <Show when={selectedPlace()}>
-          <button
-            type="button"
-            onClick={handleClear}
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 z-10"
-            aria-label="Clear selection"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </Show>
-      </div>
+      {/* Container for the PlaceAutocompleteElement */}
+      <div
+        ref={(el) => (containerRef = el)}
+        class={cn(
+          "google-places-container",
+          selectedPlace() && "selected",
+          props.disabled && "opacity-50 pointer-events-none"
+        )}
+      />
 
       <Show when={error()}>
         <p class="mt-1 text-sm text-red-600">{error()}</p>
@@ -221,15 +224,6 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
 
       <Show when={!isLoaded() && !error()}>
         <p class="mt-1 text-sm text-gray-500">Loading Google Places...</p>
-      </Show>
-
-      <Show when={selectedPlace()}>
-        <div class="mt-2 rounded-md bg-gray-50 p-3 text-sm">
-          <p class="font-medium text-gray-900">{selectedPlace()?.formattedAddress}</p>
-          <p class="text-gray-600">
-            Coordinates: {selectedPlace()?.lat.toFixed(6)}, {selectedPlace()?.lng.toFixed(6)}
-          </p>
-        </div>
       </Show>
     </div>
   );
