@@ -7,4 +7,11 @@ declare global {
   }
 }
 
+// Provide minimal module declaration for vite-tsconfig-paths plugin
+declare module "vite-tsconfig-paths" {
+  import type { Plugin } from "vite";
+  function tsconfigPaths(): Plugin;
+  export default tsconfigPaths;
+}
+
 export {};

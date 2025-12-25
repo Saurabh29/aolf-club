@@ -16,8 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "~/*": ["./src/*"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": ["src/**/*", "scripts/**/*", "tests/**/*", "src/global.d.ts"]
 }
