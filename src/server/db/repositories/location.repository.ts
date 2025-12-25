@@ -346,6 +346,32 @@ export async function updateLocation(
     expressionValues[":status"] = input.status;
   }
 
+  // Allow updating address/place fields if provided
+  if (input.placeId !== undefined) {
+    updates.push("placeId = :placeId");
+    expressionValues[":placeId"] = input.placeId;
+  }
+
+  if (input.formattedAddress !== undefined) {
+    updates.push("formattedAddress = :formattedAddress");
+    expressionValues[":formattedAddress"] = input.formattedAddress;
+  }
+
+  if (input.addressComponents !== undefined) {
+    updates.push("addressComponents = :addressComponents");
+    expressionValues[":addressComponents"] = input.addressComponents;
+  }
+
+  if (input.lat !== undefined) {
+    updates.push("lat = :lat");
+    expressionValues[":lat"] = input.lat;
+  }
+
+  if (input.lng !== undefined) {
+    updates.push("lng = :lng");
+    expressionValues[":lng"] = input.lng;
+  }
+
   if (updates.length === 0) {
     // Nothing to update, return current location
     return getLocationById(locationId);

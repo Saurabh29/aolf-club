@@ -32,12 +32,14 @@ export type ButtonVariant = "default" | "destructive" | "outline" | "secondary" 
  * Action button configuration for cards.
  */
 export interface CardAction<T> {
-  /** Display label for the button */
-  label: string;
+  /** Display label for the button (can be string or JSX for icons) */
+  label: string | JSX.Element;
   /** Click handler receiving the item */
   onClick: (item: T) => void;
   /** Button style variant */
   variant?: ButtonVariant;
+  /** Additional CSS classes */
+  class?: string;
   /** Icon element to display before label */
   icon?: JSX.Element;
   /** Condition to hide the action */

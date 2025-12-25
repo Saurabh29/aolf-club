@@ -14,11 +14,13 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.705.0",
     "@aws-sdk/lib-dynamodb": "^3.705.0",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@kobalte/core": "^0.13.7",
     "@solidjs/router": "^0.15.3",
     "@solidjs/start": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-solid": "^0.562.0",
     "solid-js": "^1.9.5",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",

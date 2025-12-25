@@ -12,9 +12,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/com
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
-import { getLocations } from "~/server/actions/locations";
+import { getLocations, deleteLocation } from "~/server/actions/locations";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
 import type { CardAction } from "~/lib/schemas/ui/card.schema";
+import { Pencil, Trash2 } from "lucide-solid";
 
 export default function LocationsPage() {
   // Track if we're on client side
@@ -32,33 +33,67 @@ export default function LocationsPage() {
 
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = createSignal(false);
+  const [editingLocation, setEditingLocation] = createSignal<LocationUi | undefined>();
 
   /**
-   * Handles successful location creation.
-   * Refetches the locations list to include the new location.
+   * Handles successful location creation or update.
+   * Refetches the locations list to reflect changes.
    */
-  const handleLocationCreated = (_location: LocationUi) => {
-    // Refetch locations to include the new one
+  const handleLocationSaved = (_location: LocationUi) => {
     refetch();
+    setEditingLocation(undefined);
   };
 
-  // Card actions for each location
+  /**
+   * Opens the dialog in create mode.
+   */
+  const handleAddNew = () => {
+    setEditingLocation(undefined);
+    setIsDialogOpen(true);
+  };
+
+  /**
+   * Opens the dialog in edit mode.
+   */
+  const handleEdit = (loc: LocationUi) => {
+    setEditingLocation(loc);
+    setIsDialogOpen(true);
+  };
+
+  /**
+   * Handles location deletion with confirmation.
+   */
+  const handleDelete = async (loc: LocationUi) => {
+    if (!confirm(`Are you sure you want to delete "${loc.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const result = await deleteLocation(loc.id);
+      if (result.success) {
+        refetch();
+      } else {
+        alert(`Failed to delete location: ${result.error}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete location:", err);
+      alert("Failed to delete location. Please try again.");
+    }
+  };
+
+  // Card actions for each location - using icons for mobile-first design
   const locationActions: CardAction<LocationUi>[] = [
     {
-      label: "View",
-      onClick: (loc) => {
-        // TODO: Navigate to location detail page
-        console.log("View location:", loc.id);
-      },
+      label: <Pencil size={16} />,
+      onClick: handleEdit,
       variant: "outline",
+      class: "p-2",
     },
     {
-      label: "Edit",
-      onClick: (loc) => {
-        // TODO: Open edit dialog
-        console.log("Edit location:", loc.id);
-      },
+      label: <Trash2 size={16} />,
+      onClick: handleDelete,
       variant: "outline",
+      class: "p-2 text-red-600 hover:bg-red-50",
     },
   ];
 
@@ -74,7 +109,7 @@ export default function LocationsPage() {
           
           {/* Action Button - rendered only on client to avoid hydration mismatch */}
           <Show when={isClient()}>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleAddNew}>
               Add Location
             </Button>
           </Show>
@@ -133,19 +168,20 @@ export default function LocationsPage() {
           grid={{ md: 2, lg: 3 }}
           emptyMessage="No locations found"
           emptyAction={
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleAddNew}>
               Add your first location
             </Button>
           }
         />
       </Show>
 
-      {/* Add Location Dialog - client only */}
+      {/* Add/Edit Location Dialog - client only */}
       <Show when={isClient()}>
         <AddLocationDialog
           open={isDialogOpen()}
           onOpenChange={setIsDialogOpen}
-          onSuccess={handleLocationCreated}
+          onSuccess={handleLocationSaved}
+          editLocation={editingLocation()}
         />
       </Show>
     </main>

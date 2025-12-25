@@ -19,6 +19,7 @@ import {
   listLocations as listLocationsRepo,
   softDeleteLocation as softDeleteLocationRepo,
   getLocationByCode as getLocationByCodeRepo,
+  updateLocation as updateLocationRepo,
 } from "~/server/db/repositories/location.repository";
 import {
   AddLocationFormSchema,
@@ -147,10 +148,11 @@ export async function getLocations(): Promise<ActionResult<LocationUi[]>> {
   try {
     const dbLocations = await listLocationsRepo();
     const uiLocations = dbLocations.map(toUiLocation);
-
+    // Return only active locations (soft-deleted items have status='inactive')
+    const activeLocations = uiLocations.filter((l) => l.status === "active");
     return {
       success: true,
-      data: uiLocations,
+      data: activeLocations,
     };
   } catch (error) {
     console.error("[getLocations] Server action failed:", error);
@@ -264,7 +266,7 @@ export async function deleteLocation(
       };
     }
 
-    await softDeleteLocationRepo(locationId);
+      await softDeleteLocationRepo(locationId);
 
     return {
       success: true,
@@ -275,6 +277,67 @@ export async function deleteLocation(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete location",
+    };
+  }
+}
+
+/**
+ * Updates an existing location's mutable fields (name only).
+ * Location code and address are immutable after creation.
+ * 
+ * @param locationId - ULID of the location to update
+ * @param updates - Fields to update (currently only name)
+ * @returns ActionResult with updated location or error message
+ */
+export async function updateLocation(
+  locationId: string,
+  updates: { name?: string; placeId?: string; formattedAddress?: string; lat?: number; lng?: number; addressComponents?: any }
+): Promise<ActionResult<LocationUi>> {
+  "use server";
+
+  try {
+    // Validate the locationId format
+    if (!locationId || !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
+      return {
+        success: false,
+        error: "Invalid location ID format",
+      };
+    }
+
+    // Ensure at least one field to update
+    if (!updates.name && !updates.placeId && !updates.formattedAddress && updates.lat === undefined && updates.lng === undefined) {
+      return {
+        success: false,
+        error: "No updates provided",
+      };
+    }
+
+    const repoInput: any = {};
+    if (updates.name) repoInput.name = updates.name.trim();
+    if (updates.placeId) repoInput.placeId = updates.placeId;
+    if (updates.formattedAddress) repoInput.formattedAddress = updates.formattedAddress;
+    if (updates.lat !== undefined) repoInput.lat = updates.lat;
+    if (updates.lng !== undefined) repoInput.lng = updates.lng;
+    if (updates.addressComponents) repoInput.addressComponents = updates.addressComponents;
+
+    const dbLocation = await updateLocationRepo(locationId, repoInput);
+
+    if (!dbLocation) {
+      return {
+        success: false,
+        error: "Location not found",
+      };
+    }
+
+    return {
+      success: true,
+      data: toUiLocation(dbLocation),
+    };
+  } catch (error) {
+    console.error("[updateLocation] Server action failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update location",
     };
   }
 }

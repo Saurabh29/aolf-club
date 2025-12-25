@@ -129,6 +129,7 @@ export function GenericCardList<T extends { id: string }>(
                           <Button
                             variant={action.variant ?? "outline"}
                             size="sm"
+                            class={action.class}
                             onClick={() => action.onClick(item)}
                             disabled={action.disabled?.(item)}
                           >

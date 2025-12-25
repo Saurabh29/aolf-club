@@ -11,7 +11,7 @@
  * - Place selection: Must select a place from Google Autocomplete (provides placeId, address, coords)
  */
 
-import { createSignal, type Component, Show } from "solid-js";
+import { createSignal, createEffect, type Component, Show } from "solid-js";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { GooglePlaceSearch, type PlaceDetails } from "~/components/GooglePlaceSearch";
-import { createLocation } from "~/server/actions/locations";
+import { createLocation, updateLocation } from "~/server/actions/locations";
 import { sanitizeLocationCode } from "~/lib/schemas/ui/location.schema";
 import type { AddLocationForm } from "~/lib/schemas/ui/location.schema";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
@@ -35,10 +35,10 @@ export interface AddLocationDialogProps {
   open: boolean;
   /** Callback to change the open state */
   onOpenChange: (open: boolean) => void;
-  /** Callback when a location is successfully created */
+  /** Callback when a location is successfully created or updated */
   onSuccess?: (location: LocationUi) => void;
-  /** When editing an existing location, prevent editing the locationCode */
-  readOnlyLocationCode?: boolean;
+  /** When editing, provide the existing location */
+  editLocation?: LocationUi;
 }
 
 export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
@@ -51,6 +51,24 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [codeError, setCodeError] = createSignal<string | null>(null);
+
+  // Initialize form when editing
+  createEffect(() => {
+    const loc = props.editLocation;
+    if (loc) {
+      setName(loc.name);
+      setLocationCode(loc.locationCode);
+      if (loc.placeId) {
+        setPlaceDetails({
+          placeId: loc.placeId,
+          formattedAddress: loc.formattedAddress || "",
+          lat: loc.lat || 0,
+          lng: loc.lng || 0,
+          addressComponents: loc.addressComponents,
+        });
+      }
+    }
+  });
 
   /**
    * Handles location code input with sanitization.
@@ -121,7 +139,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
   };
 
   /**
-   * Handles form submission.
+   * Handles form submission for both create and edit modes.
    */
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -135,32 +153,56 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
 
     try {
       const place = placeDetails()!;
+      const isEditMode = !!props.editLocation;
 
-      const formData: AddLocationForm = {
-        name: name().trim(),
-        locationCode: locationCode(),
-        placeId: place.placeId,
-        formattedAddress: place.formattedAddress,
-        lat: place.lat,
-        lng: place.lng,
-        addressComponents: place.addressComponents,
-        status: "active",
-      };
+      if (isEditMode) {
+        // Update existing location. Allow updating name and address if changed.
+        const updatePayload: any = { name: name().trim() };
+        const currentPlace = placeDetails();
+        if (currentPlace) {
+          updatePayload.placeId = currentPlace.placeId;
+          updatePayload.formattedAddress = currentPlace.formattedAddress;
+          updatePayload.lat = currentPlace.lat;
+          updatePayload.lng = currentPlace.lng;
+          updatePayload.addressComponents = currentPlace.addressComponents;
+        }
 
-      const result = await createLocation(formData);
+        const result = await updateLocation(props.editLocation!.id, updatePayload);
 
-      if (!result.success) {
-        setError(result.error);
-        return;
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+
+        props.onSuccess?.(result.data);
+      } else {
+        // Create new location
+        const formData: AddLocationForm = {
+          name: name().trim(),
+          locationCode: locationCode(),
+          placeId: place.placeId,
+          formattedAddress: place.formattedAddress,
+          lat: place.lat,
+          lng: place.lng,
+          addressComponents: place.addressComponents,
+          status: "active",
+        };
+
+        const result = await createLocation(formData);
+
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+
+        props.onSuccess?.(result.data);
       }
 
-      // Success!
-      props.onSuccess?.(result.data);
       resetForm();
       props.onOpenChange(false);
     } catch (err) {
-      console.error("Failed to create location:", err);
-      setError(err instanceof Error ? err.message : "Failed to create location");
+      console.error("Failed to save location:", err);
+      setError(err instanceof Error ? err.message : "Failed to save location");
     } finally {
       setIsSaving(false);
     }
@@ -182,9 +224,11 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
     <Dialog open={props.open} onOpenChange={handleOpenChange}>
       <DialogContent class="max-w-md" onClose={handleClose}>
         <DialogHeader>
-          <DialogTitle>Add New Location</DialogTitle>
+          <DialogTitle>{props.editLocation ? "Edit Location" : "Add New Location"}</DialogTitle>
           <DialogDescription>
-            Search for a location using Google Places. Manual address entry is not allowed.
+            {props.editLocation 
+              ? "Update the location name. Location code and address cannot be changed."
+              : "Search for a location using Google Places. Manual address entry is not allowed."}
           </DialogDescription>
         </DialogHeader>
 
@@ -212,9 +256,9 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
               value={locationCode()}
               onInput={(e) => handleLocationCodeChange(e.currentTarget.value)}
               placeholder="e.g., austin-main-01"
-              disabled={isSaving() || props.readOnlyLocationCode}
+              disabled={isSaving() || !!props.editLocation}
               class={cn(
-                props.readOnlyLocationCode && "bg-gray-100 cursor-not-allowed",
+                props.editLocation && "bg-gray-100 cursor-not-allowed",
                 codeError() && "border-red-500"
               )}
               required
@@ -227,7 +271,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
             </p>
           </div>
 
-          {/* Google Places Search */}
+          {/* Google Places Search - allow editing address in edit mode */}
           <div class="space-y-2">
             <Label>Location Address *</Label>
             <div class="border border-gray-200 rounded-md p-2">
@@ -237,9 +281,10 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
                 placeholder="Search for an address..."
                 disabled={isSaving()}
                 class="w-full"
+                initialValue={placeDetails()?.formattedAddress}
               />
             </div>
-            {/* Readonly textbox showing selected place (useful for edit flows) */}
+            {/* Readonly textbox showing selected place */}
             <input
               type="text"
               readonly
@@ -272,7 +317,9 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
               type="submit"
               disabled={isSaving() || !isFormValid()}
             >
-              {isSaving() ? "Creating..." : "Create Location"}
+              {isSaving() 
+                ? (props.editLocation ? "Saving..." : "Creating...") 
+                : (props.editLocation ? "Save Changes" : "Create Location")}
             </Button>
           </DialogFooter>
         </form>
