@@ -202,15 +202,7 @@ export const Keys = {
   
   /** Prefix for querying all pages under a ROLE# PK */
   PAGE_PREFIX: "PAGE#" as const,
-
-  // ===========================================================================
-  // DEPRECATED (kept for backward compatibility)
-  // ===========================================================================
   
-  /**
-   * @deprecated Use metaSK() instead
-   */
-  locationCodeSK: (): "META" => "META" as const,
 };
 
 /**
