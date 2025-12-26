@@ -15,11 +15,12 @@
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { env } from "~/server/config/env";
 
-// Configuration from environment variables
-export const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
-export const AWS_REGION = process.env.AWS_REGION ?? "us-east-1";
-const DYNAMODB_ENDPOINT = process.env.DYNAMODB_ENDPOINT;
+// Configuration from validated env
+export const TABLE_NAME = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
+export const AWS_REGION = env.AWS_REGION ?? "us-east-1";
+const DYNAMODB_ENDPOINT = env.DYNAMODB_ENDPOINT;
 
 /**
  * Creates the DynamoDB client with appropriate configuration.

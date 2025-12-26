@@ -25,10 +25,11 @@ import {
   listLocations,
   softDeleteLocation,
 } from "~/server/db/repositories/location.repository";
+import { testEnv } from "./setup";
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities-test";
-const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
-const REGION = process.env.AWS_REGION ?? "us-east-1";
+const TABLE_NAME = testEnv.DYNAMODB_TABLE_NAME;
+const ENDPOINT = testEnv.DYNAMODB_ENDPOINT;
+const REGION = testEnv.AWS_REGION;
 
 // Create DynamoDB client for test setup
 const ddbClient = new DynamoDBClient({

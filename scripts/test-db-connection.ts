@@ -7,12 +7,13 @@
 
 import { ListTablesCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { config } from "dotenv";
+import { env } from "~/server/config/env";
 
-// Load environment variables
+// Load environment variables from files if present
 config();
 
-const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
-const REGION = process.env.AWS_REGION ?? "us-east-1";
+const ENDPOINT = env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
+const REGION = env.AWS_REGION ?? "us-east-1";
 
 async function testConnection() {
   console.log("Testing DynamoDB connection...");
@@ -35,7 +36,7 @@ async function testConnection() {
     console.log("");
     console.log("Existing tables:", result.TableNames?.join(", ") || "(none)");
     
-    const tableName = process.env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
+    const tableName = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
     if (result.TableNames?.includes(tableName)) {
       console.log(`✅ Table "${tableName}" exists.`);
     } else {

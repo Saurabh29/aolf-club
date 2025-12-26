@@ -9,13 +9,14 @@
 
 import { CreateTableCommand, DynamoDBClient, ResourceInUseException } from "@aws-sdk/client-dynamodb";
 import { config } from "dotenv";
+import { env } from "~/server/config/env";
 
-// Load environment variables
+// Load environment variables from .env (dotenv still supports overrides)
 config();
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
-const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
-const REGION = process.env.AWS_REGION ?? "us-east-1";
+const TABLE_NAME = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
+const ENDPOINT = env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
+const REGION = env.AWS_REGION ?? "us-east-1";
 
 async function createTable() {
   console.log(`Creating table: ${TABLE_NAME}`);
