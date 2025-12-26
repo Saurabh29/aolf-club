@@ -4,6 +4,10 @@ import { env } from "../config/env"
 
 export const authConfig: StartAuthJSConfig = {
     secret: env.AUTH_SECRET,
+    basePath: new URL(env.AUTH_URL!).pathname,
+    session: {
+        strategy: "jwt",
+    },
     providers: [
         github({
             clientId: env.GITHUB_CLIENT_ID!,
@@ -11,6 +15,5 @@ export const authConfig: StartAuthJSConfig = {
             authorization: { params: { scope: "read:user user:email" } }
         })
     ],
-    debug: true,
-    basePath: new URL(env.AUTH_URL!).pathname
+    debug: true
 };
