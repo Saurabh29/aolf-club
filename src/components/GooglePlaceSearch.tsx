@@ -189,7 +189,7 @@ export const GooglePlaceSearch: Component<GooglePlaceSearchProps> = (props) => {
     <div class={cn("relative w-full", props.class)}>
       <Combobox<{ value: string; label: string; suggestion: any }>
         options={placePredictions()}
-        inputValue={inputValue()}
+        value={selectedOption()}
         onInputChange={handleInputChange}
         onChange={handleSelectionChange}
         placeholder={props.placeholder || "Search for a place..."}

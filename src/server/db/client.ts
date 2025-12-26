@@ -66,23 +66,50 @@ export const docClient = DynamoDBDocumentClient.from(ddbClient, {
  * Centralizes key generation to ensure consistency across the codebase.
  * All DynamoDB operations should use these helpers.
  * 
- * PK/SK Patterns:
- * - Location: PK = "LOCATION#<locationId>", SK = "META"
- * - LocationCodeLookup: PK = "LOCATION_CODE#<locationCode>", SK = "META"
+ * PK/SK Patterns (Single-Table Design):
+ * 
+ * ENTITIES (Nodes):
+ * - EmailIdentity:      PK = "EMAIL#<email>",              SK = "META"
+ * - User:               PK = "USER#<userId>",              SK = "META"
+ * - Location:           PK = "LOCATION#<locationId>",      SK = "META"
+ * - LocationCodeLookup: PK = "LOCATION_CODE#<code>",       SK = "META"
+ * - UserGroup:          PK = "GROUP#<groupId>",            SK = "META"
+ * - Role:               PK = "ROLE#<roleName>",            SK = "META"
+ * - Page:               PK = "PAGE#<pageName>",            SK = "META"
+ * 
+ * RELATIONSHIPS (Edges):
+ * - User→Location:      PK = "USER#<userId>",              SK = "LOCATION#<locationId>"
+ * - Location→User:      PK = "LOCATION#<locationId>",      SK = "USER#<userId>"
+ * - User→Group:         PK = "USER#<userId>",              SK = "GROUP#<groupId>"
+ * - Group→User:         PK = "GROUP#<groupId>",            SK = "USER#<userId>"
+ * - Group→Role:         PK = "GROUP#<groupId>",            SK = "ROLE#<roleName>"
+ * - Role→Page:          PK = "ROLE#<roleName>",            SK = "PAGE#<pageName>"
  */
 export const Keys = {
+  // ===========================================================================
+  // ENTITY KEYS (PK for nodes)
+  // ===========================================================================
+  
+  /**
+   * Generate PK for an EmailIdentity item.
+   * @param email - User's email address
+   * @returns PK in format "EMAIL#<email>"
+   */
+  emailPK: (email: string): string => `EMAIL#${email.toLowerCase()}`,
+
+  /**
+   * Generate PK for a User item.
+   * @param userId - ULID of the user
+   * @returns PK in format "USER#<userId>"
+   */
+  userPK: (userId: string): string => `USER#${userId}`,
+
   /**
    * Generate PK for a Location item.
    * @param locationId - ULID of the location
    * @returns PK in format "LOCATION#<locationId>"
    */
   locationPK: (locationId: string): string => `LOCATION#${locationId}`,
-
-  /**
-   * Generate SK for a Location item.
-   * @returns "META" literal
-   */
-  locationSK: (): "META" => "META" as const,
 
   /**
    * Generate PK for a LocationCodeLookup item.
@@ -92,8 +119,96 @@ export const Keys = {
   locationCodePK: (locationCode: string): string => `LOCATION_CODE#${locationCode}`,
 
   /**
-   * Generate SK for a LocationCodeLookup item.
+   * Generate PK for a UserGroup item.
+   * @param groupId - ULID of the group
+   * @returns PK in format "GROUP#<groupId>"
+   */
+  groupPK: (groupId: string): string => `GROUP#${groupId}`,
+
+  /**
+   * Generate PK for a Role item.
+   * @param roleName - Name of the role
+   * @returns PK in format "ROLE#<roleName>"
+   */
+  rolePK: (roleName: string): string => `ROLE#${roleName}`,
+
+  /**
+   * Generate PK for a Page item.
+   * @param pageName - Name of the page
+   * @returns PK in format "PAGE#<pageName>"
+   */
+  pagePK: (pageName: string): string => `PAGE#${pageName}`,
+
+  // ===========================================================================
+  // SK VALUES
+  // ===========================================================================
+  
+  /**
+   * Generate SK for entity META items.
    * @returns "META" literal
+   */
+  metaSK: (): "META" => "META" as const,
+
+  /**
+   * Generate SK for User→Location or Location→User edges.
+   * @param locationId - ULID of the location
+   * @returns SK in format "LOCATION#<locationId>"
+   */
+  locationSK: (locationId: string): string => `LOCATION#${locationId}`,
+
+  /**
+   * Generate SK for Location→User or Group→User edges.
+   * @param userId - ULID of the user
+   * @returns SK in format "USER#<userId>"
+   */
+  userSK: (userId: string): string => `USER#${userId}`,
+
+  /**
+   * Generate SK for User→Group edges.
+   * @param groupId - ULID of the group
+   * @returns SK in format "GROUP#<groupId>"
+   */
+  groupSK: (groupId: string): string => `GROUP#${groupId}`,
+
+  /**
+   * Generate SK for Group→Role edges.
+   * @param roleName - Name of the role
+   * @returns SK in format "ROLE#<roleName>"
+   */
+  roleSK: (roleName: string): string => `ROLE#${roleName}`,
+
+  /**
+   * Generate SK for Role→Page edges.
+   * @param pageName - Name of the page
+   * @returns SK in format "PAGE#<pageName>"
+   */
+  pageSK: (pageName: string): string => `PAGE#${pageName}`,
+
+  // ===========================================================================
+  // SK PREFIXES (for Query operations with begins_with)
+  // ===========================================================================
+  
+  /** Prefix for querying all locations under a USER# PK */
+  LOCATION_PREFIX: "LOCATION#" as const,
+  
+  /** Prefix for querying all users under a LOCATION# or GROUP# PK */
+  USER_PREFIX: "USER#" as const,
+  
+  /** Prefix for querying all groups under a USER# PK */
+  GROUP_PREFIX: "GROUP#" as const,
+  
+  /** Prefix for querying all roles under a GROUP# PK */
+  ROLE_PREFIX: "ROLE#" as const,
+  
+  /** Prefix for querying all pages under a ROLE# PK */
+  PAGE_PREFIX: "PAGE#" as const,
+
+  // ===========================================================================
+  // DEPRECATED (kept for backward compatibility)
+  // ===========================================================================
+  
+  /**
+   * @deprecated Use metaSK() instead
    */
   locationCodeSK: (): "META" => "META" as const,
 };

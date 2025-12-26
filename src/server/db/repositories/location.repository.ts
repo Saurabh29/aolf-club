@@ -66,7 +66,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
   // Build the full location object
   const location: Location = {
     PK: Keys.locationPK(locationId),
-    SK: Keys.locationSK(),
+    SK: Keys.metaSK(),
     itemType: "Location",
     locationId,
     locationCode: input.locationCode,
@@ -87,7 +87,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
   // Build the lookup item for locationCode uniqueness
   const lookupItem: LocationCodeLookup = {
     PK: Keys.locationCodePK(input.locationCode),
-    SK: Keys.locationCodeSK(),
+    SK: Keys.metaSK(),
     itemType: "LocationCodeLookup",
     locationId,
     locationCode: input.locationCode,
@@ -161,7 +161,7 @@ export async function getLocationById(locationId: string): Promise<Location | nu
         TableName: TABLE_NAME,
         Key: {
           PK: Keys.locationPK(locationId),
-          SK: Keys.locationSK(),
+          SK: Keys.metaSK(),
         },
       })
     );
@@ -198,7 +198,7 @@ export async function getLocationByCode(locationCode: string): Promise<Location 
         TableName: TABLE_NAME,
         Key: {
           PK: Keys.locationCodePK(locationCode),
-          SK: Keys.locationCodeSK(),
+          SK: Keys.metaSK(),
         },
       })
     );
@@ -294,7 +294,7 @@ export async function softDeleteLocation(locationId: string): Promise<void> {
         TableName: TABLE_NAME,
         Key: {
           PK: Keys.locationPK(locationId),
-          SK: Keys.locationSK(),
+          SK: Keys.metaSK(),
         },
         UpdateExpression: "SET #status = :status, updatedAt = :updatedAt",
         ExpressionAttributeNames: {
@@ -387,7 +387,7 @@ export async function updateLocation(
         TableName: TABLE_NAME,
         Key: {
           PK: Keys.locationPK(locationId),
-          SK: Keys.locationSK(),
+          SK: Keys.metaSK(),
         },
         UpdateExpression: `SET ${updates.join(", ")}`,
         ExpressionAttributeNames:
