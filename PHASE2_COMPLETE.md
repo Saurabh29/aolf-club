@@ -363,7 +363,6 @@ console.log(canAccessDashboard); // true
 - `src/lib/schemas/db/index.ts` (added new exports)
 - `src/server/db/client.ts` (updated Keys helper)
 - `src/server/db/repositories/location.repository.ts` (fixed locationSK calls)
-- `src/server/db/schema.ts` (legacy - can be removed if unused)
 - `src/server/db/SCHEMA_DESIGN.md` (updated)
 
 ---

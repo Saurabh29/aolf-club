@@ -47,45 +47,6 @@ export const UserSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 
 // ============================================================================
-// LOCATION
-// ============================================================================
-/**
- * Location - Primary location entity
- * 
- * PK: "LOCATION#<locationId>", SK: "META"
- * Query Pattern: GetItem(PK="LOCATION#<locationId>", SK="META") → location
- */
-export const LocationSchema = z.object({
-  PK: z.string().regex(/^LOCATION#[0-9A-Z]{26}$/),
-  SK: z.literal("META"),
-  locationId: z.string().ulid(),
-  locationCode: z.string().min(1).max(50),
-  name: z.string().min(1).max(255),
-  address: z.string().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-export type Location = z.infer<typeof LocationSchema>;
-
-// ============================================================================
-// LOCATION CODE LOOKUP
-// ============================================================================
-/**
- * LocationCodeLookup - Human-readable code → locationId resolver
- * 
- * PK: "LOCATION_CODE#<locationCode>", SK: "META"
- * Query Pattern: GetItem(PK="LOCATION_CODE#NYC001", SK="META") → locationId
- */
-export const LocationCodeLookupSchema = z.object({
-  PK: z.string().regex(/^LOCATION_CODE#.+$/),
-  SK: z.literal("META"),
-  locationCode: z.string().min(1).max(50),
-  locationId: z.string().ulid(),
-  createdAt: z.string().datetime(),
-});
-export type LocationCodeLookup = z.infer<typeof LocationCodeLookupSchema>;
-
-// ============================================================================
 // USER GROUP
 // ============================================================================
 /**
