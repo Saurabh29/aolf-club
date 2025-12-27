@@ -13,20 +13,22 @@ import { createSignal, createMemo, Show, type Component } from "solid-js";
 import { TaskStepper, type Step } from "~/components/TaskStepper";
 import { TaskStep1 } from "~/components/TaskStep1";
 import { TaskStep2 } from "~/components/TaskStep2";
-import { TaskStep3 } from "~/components/TaskStep3";
+import TaskStep3 from "~/components/TaskStep3";
+
 import type {
   TaskFormState,
   TaskDefinition,
   TargetUser,
   AssignmentMapping,
+  AssignmentState,
   SaveTaskRequest,
 } from "~/lib/schemas/ui";
-import { createNewTaskFormState, createEditTaskFormState } from "~/lib/schemas/ui";
+import { createNewTaskFormState, createEditTaskFormState, convertToAssignmentMappings } from "~/lib/schemas/ui";
 
 const STEPS: Step[] = [
   { number: 1, label: "Define Task", description: "Title, location, actions" },
   { number: 2, label: "Select Targets", description: "Members or leads" },
-  { number: 3, label: "Assign Volunteers", description: "Optional: Assign to teachers" },
+  { number: 3, label: "Assign Volunteers", description: "Assign to teachers/volunteers" },
 ];
 
 export interface TaskFormProps {
@@ -35,7 +37,7 @@ export interface TaskFormProps {
   initialData?: {
     definition: TaskDefinition;
     targets: TargetUser[];
-    assignments: AssignmentMapping[];
+    assignments: AssignmentMapping[]; // Backend format
   }; // Required for EDIT mode
   onSave: (request: SaveTaskRequest) => void;
   onCancel: () => void;
@@ -90,7 +92,7 @@ export const TaskForm: Component<TaskFormProps> = (props) => {
   };
 
   // Step 3: Save assignments and submit
-  const handleStep3Next = (assignments: AssignmentMapping[]) => {
+  const handleStep3Next = (assignments: AssignmentState) => {
     setState((prev) => ({
       ...prev,
       assignments,
@@ -99,29 +101,22 @@ export const TaskForm: Component<TaskFormProps> = (props) => {
     submitTask(assignments);
   };
 
-  // Step 3: Skip assignments and submit
-  const handleStep3Skip = () => {
-    setState((prev) => ({
-      ...prev,
-      assignments: [],
-      step3Valid: true,
-    }));
-    submitTask([]);
-  };
-
   // Submit final task
-  const submitTask = (assignments: AssignmentMapping[]) => {
+  const submitTask = (assignments: AssignmentState) => {
     const s = state();
     if (!s.step1Valid || !s.step2Valid) {
       alert("Please complete all required steps");
       return;
     }
 
+    // Convert Record-based assignments to AssignmentMapping[] for backend
+    const assignmentMappings = convertToAssignmentMappings(assignments);
+
     const request: SaveTaskRequest = {
       taskId: s.taskId,
       definition: s.definition as TaskDefinition,
       targetUserIds: s.selectedTargets.map((t) => t.userId),
-      assignments: assignments.length > 0 ? assignments : undefined,
+      assignments: assignmentMappings.length > 0 ? assignmentMappings : undefined,
     };
 
     props.onSave(request);
@@ -169,11 +164,11 @@ export const TaskForm: Component<TaskFormProps> = (props) => {
 
         <Show when={state().currentStep === 3}>
           <TaskStep3
-            targets={state().selectedTargets}
+            targets={state().selectedTargets.map(t => ({ id: t.userId, name: t.name, phone: t.phone ?? "", type: t.targetType === "MEMBER" ? "Volunteer" : "Teacher" }))}
+            volunteers={[]}
+            teachers={[]}
             initialAssignments={state().assignments}
             onNext={handleStep3Next}
-            onPrevious={() => goToStep(2)}
-            onSkip={handleStep3Skip}
           />
         </Show>
       </div>

@@ -1,321 +1,343 @@
-/**
- * Task Step 3: Assign Teachers/Volunteers to Targets
- * 
- * Allows selecting multiple targets and assigning them to one specific teacher/volunteer.
- * Shows clear indication of who is assigned to whom.
- */
-
-import { For, Show, createSignal, createMemo, type Component } from "solid-js";
+import { For, Show, createSignal, createMemo } from "solid-js";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import type { TargetUser, AssignmentMapping, Assignee } from "~/lib/schemas/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
+  Combobox,
+  ComboboxControl,
+  ComboboxInput,
+  ComboboxTrigger,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxItemLabel,
+  ComboboxItemIndicator,
+} from "~/components/ui/combobox";
+import type { AssignmentState } from "~/lib/schemas/ui/task-creation.schema";
 
-// Dummy assignees (teachers/volunteers)
+// Types
+type TargetUser = {
+  id: string;
+  name: string;
+  phone: string;
+  type: "Teacher" | "Volunteer";
+};
+
+type Assignee = {
+  id: string;
+  name: string;
+  role: "Teacher" | "Volunteer";
+};
+
+type AssigneeOption = {
+  value: string; // "unassigned" or user.id
+  label: string;
+  assignee: Assignee | null;
+};
+
+type TaskStep3Props = {
+  targets: TargetUser[];
+  volunteers: Assignee[];
+  teachers: Assignee[];
+  initialAssignments?: AssignmentState;
+  onNext: (assignments: AssignmentState) => void;
+};
+
+// Dummy data for testing
 const DUMMY_ASSIGNEES: Assignee[] = [
-  { userId: "01HZXK7G2TEACHER001", name: "Deepak Patel", role: "TEACHER" },
-  { userId: "01HZXK7G2TEACHER002", name: "Sneha Reddy", role: "TEACHER" },
-  { userId: "01HZXK7G2VOLUNTEER01", name: "Arjun Iyer", role: "VOLUNTEER" },
-  { userId: "01HZXK7G2VOLUNTEER02", name: "Meera Shah", role: "VOLUNTEER" },
+  { id: "01JHHX3A1BEXAMPLE001", name: "John Smith", role: "Teacher" },
+  { id: "01JHHX3A1BEXAMPLE002", name: "Sarah Johnson", role: "Teacher" },
+  { id: "01JHHX3A1BEXAMPLE003", name: "Mike Davis", role: "Volunteer" },
+  { id: "01JHHX3A1BEXAMPLE004", name: "Emily Brown", role: "Volunteer" },
+  { id: "01JHHX3A1BEXAMPLE005", name: "David Wilson", role: "Volunteer" },
+  { id: "01JHHX3A1BEXAMPLE006", name: "Lisa Anderson", role: "Teacher" },
 ];
 
-export interface TaskStep3Props {
-  targets: TargetUser[];
-  initialAssignments?: AssignmentMapping[];
-  onNext: (assignments: AssignmentMapping[]) => void;
-  onPrevious: () => void;
-  onSkip: () => void;
-}
-
-export const TaskStep3: Component<TaskStep3Props> = (props) => {
-  const [assignments, setAssignments] = createSignal<Map<string, string[]>>(
-    new Map(
-      (props.initialAssignments ?? []).map((a) => [a.assigneeUserId, a.targetUserIds])
-    )
+export default function TaskStep3(props: TaskStep3Props) {
+  // State
+  const [assignments, setAssignments] = createSignal<AssignmentState>(
+    props.initialAssignments || {}
   );
-  const [selectedTargetIds, setSelectedTargetIds] = createSignal<Set<string>>(new Set());
-  const [selectedAssignee, setSelectedAssignee] = createSignal<string | null>(null);
+  const [selectedRows, setSelectedRows] = createSignal<Set<string>>(new Set());
+  const [bulkAssigneeId, setBulkAssigneeId] = createSignal<string | null>(null);
 
-  // Get assignment for a target
-  const getAssignmentForTarget = (targetUserId: string): Assignee | null => {
-    for (const [assigneeId, targetIds] of assignments()) {
-      if (targetIds.includes(targetUserId)) {
-        return DUMMY_ASSIGNEES.find((a) => a.userId === assigneeId) ?? null;
-      }
-    }
-    return null;
-  };
-
-  // Get targets assigned to an assignee
-  const getTargetsForAssignee = (assigneeUserId: string): TargetUser[] => {
-    const targetIds = assignments().get(assigneeUserId) ?? [];
-    return props.targets.filter((t) => targetIds.includes(t.userId));
-  };
-
-  // Unassigned targets
-  const unassignedTargets = createMemo(() => {
-    const assignedIds = new Set<string>();
-    for (const targetIds of assignments().values()) {
-      targetIds.forEach((id) => assignedIds.add(id));
-    }
-    return props.targets.filter((t) => !assignedIds.has(t.userId));
+  // Combine all assignees (teachers + volunteers) with "Unassigned" option
+  const allAssignees = createMemo(() => {
+    // Use dummy data for now
+    return DUMMY_ASSIGNEES;
   });
 
-  // Toggle target selection
-  const toggleTarget = (targetUserId: string) => {
-    const newSet = new Set(selectedTargetIds());
-    if (newSet.has(targetUserId)) {
-      newSet.delete(targetUserId);
-    } else {
-      newSet.add(targetUserId);
-    }
-    setSelectedTargetIds(newSet);
+  const assigneeOptions = createMemo((): AssigneeOption[] => {
+    const options: AssigneeOption[] = [
+      { value: "unassigned", label: "Unassigned", assignee: null },
+    ];
+    
+    allAssignees().forEach((assignee) => {
+      options.push({
+        value: assignee.id,
+        label: `${assignee.name} (${assignee.role})`,
+        assignee,
+      });
+    });
+    
+    return options;
+  });
+
+  // Statistics
+  const assignedCount = createMemo(() => {
+    return Object.values(assignments()).filter((a) => a !== null).length;
+  });
+
+  const unassignedCount = createMemo(() => {
+    return props.targets.length - assignedCount();
+  });
+
+  // Helper functions
+  const getAssignee = (assigneeId: string | null | undefined): Assignee | null => {
+    if (!assigneeId) return null;
+    return allAssignees().find((a) => a.id === assigneeId) || null;
   };
 
-  // Assign selected targets to chosen assignee
-  const handleAssign = () => {
-    if (!selectedAssignee()) {
-      alert("Please select a teacher or volunteer");
-      return;
+  const getAssignmentOption = (targetId: string): AssigneeOption => {
+    const assigneeId = assignments()[targetId];
+    if (!assigneeId) {
+      return { value: "unassigned", label: "Unassigned", assignee: null };
     }
-    if (selectedTargetIds().size === 0) {
-      alert("Please select at least one target user");
-      return;
+    const assignee = getAssignee(assigneeId);
+    if (!assignee) {
+      return { value: "unassigned", label: "Unassigned", assignee: null };
     }
-
-    const assigneeId = selectedAssignee()!;
-    const newAssignments = new Map(assignments());
-    const existing = newAssignments.get(assigneeId) ?? [];
-    const updated = [...new Set([...existing, ...Array.from(selectedTargetIds())])];
-    newAssignments.set(assigneeId, updated);
-
-    setAssignments(newAssignments);
-    setSelectedTargetIds(new Set<string>());
-    setSelectedAssignee(null);
+    return {
+      value: assignee.id,
+      label: `${assignee.name} (${assignee.role})`,
+      assignee,
+    };
   };
 
-  // Remove a single assignment
-  const handleRemoveAssignment = (assigneeUserId: string, targetUserId: string) => {
-    const newAssignments = new Map(assignments());
-    const existing = newAssignments.get(assigneeUserId) ?? [];
-    const updated = existing.filter((id) => id !== targetUserId);
-    if (updated.length > 0) {
-      newAssignments.set(assigneeUserId, updated);
+  const updateAssignment = (targetId: string, option: AssigneeOption) => {
+    setAssignments((prev) => ({
+      ...prev,
+      [targetId]: option.value === "unassigned" ? null : option.value,
+    }));
+  };
+
+  // Row selection
+  const toggleRow = (targetId: string) => {
+    setSelectedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(targetId)) {
+        newSet.delete(targetId);
+      } else {
+        newSet.add(targetId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(new Set(props.targets.map((t) => t.id)));
     } else {
-      newAssignments.delete(assigneeUserId);
+      setSelectedRows(new Set<string>());
     }
-    setAssignments(newAssignments);
+  };
+
+  const isRowSelected = (targetId: string) => selectedRows().has(targetId);
+
+  // Bulk assignment
+  const applyBulkAssignment = () => {
+    const assigneeId = bulkAssigneeId();
+    if (assigneeId === null) return;
+
+    setAssignments((prev) => {
+      const newAssignments = { ...prev };
+      selectedRows().forEach((targetId) => {
+        newAssignments[targetId] = assigneeId === "unassigned" ? null : assigneeId;
+      });
+      return newAssignments;
+    });
+
+    // Clear selection after bulk assignment
+    setSelectedRows(new Set<string>());
+    setBulkAssigneeId(null);
   };
 
   const handleNext = () => {
-    const mappings: AssignmentMapping[] = Array.from(assignments()).map(
-      ([assigneeUserId, targetUserIds]) => ({
-        assigneeUserId,
-        targetUserIds,
-      })
-    );
-    props.onNext(mappings);
+    props.onNext(assignments());
+  };
+
+  const getBulkAssigneeOption = (): AssigneeOption | undefined => {
+    const id = bulkAssigneeId();
+    if (!id) return undefined;
+    return assigneeOptions().find((opt) => opt.value === id);
   };
 
   return (
     <div class="space-y-6">
-      {/* Current Assignments */}
+      {/* Statistics Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Assignments</CardTitle>
-          <p class="text-sm text-gray-600 mt-2">
-            {unassignedTargets().length} of {props.targets.length} targets unassigned
-          </p>
+          <CardTitle>Assignment Overview</CardTitle>
         </CardHeader>
-        <CardContent class="space-y-4">
-          <Show
-            when={assignments().size > 0}
-            fallback={
-              <div class="text-center text-gray-500 py-6">
-                No assignments yet. Select targets below and assign to a teacher/volunteer.
-              </div>
-            }
-          >
-            <For each={DUMMY_ASSIGNEES}>
-              {(assignee) => {
-                const assignedTargets = getTargetsForAssignee(assignee.userId);
-                return (
-                  <Show when={assignedTargets.length > 0}>
-                    <div class="p-4 border border-gray-200 rounded-lg space-y-2">
-                      <div class="flex items-center justify-between">
-                        <div>
-                          <span class="font-medium text-gray-900">{assignee.name}</span>
-                          <Badge variant="outline" class="ml-2">
-                            {assignee.role}
-                          </Badge>
-                        </div>
-                        <span class="text-sm text-gray-600">
-                          {assignedTargets.length} target{assignedTargets.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div class="flex flex-wrap gap-2">
-                        <For each={assignedTargets}>
-                          {(target) => (
-                            <div class="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-sm">
-                              <span>{target.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveAssignment(assignee.userId, target.userId)}
-                                class="ml-1 text-blue-600 hover:text-blue-800"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          )}
-                        </For>
-                      </div>
-                    </div>
-                  </Show>
-                );
-              }}
-            </For>
-          </Show>
+        <CardContent>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="text-3xl font-bold">{props.targets.length}</div>
+              <div class="text-sm text-muted-foreground">Total Targets</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-green-600">{assignedCount()}</div>
+              <div class="text-sm text-muted-foreground">Assigned</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-orange-600">{unassignedCount()}</div>
+              <div class="text-sm text-muted-foreground">Unassigned</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Assignment Interface */}
+      {/* Bulk Assignment Toolbar */}
+      <Show when={selectedRows().size > 0}>
+        <Card class="border-blue-200 bg-blue-50">
+          <CardContent class="pt-6">
+            <div class="flex items-center gap-4">
+              <span class="font-medium">
+                {selectedRows().size} target{selectedRows().size !== 1 ? "s" : ""} selected
+              </span>
+              <div class="flex-1 max-w-xs">
+                <Combobox<AssigneeOption>
+                  options={assigneeOptions()}
+                  value={getBulkAssigneeOption()}
+                  onChange={(option) => setBulkAssigneeId(option?.value || null)}
+                  optionValue="value"
+                  optionTextValue="label"
+                  placeholder="Select assignee..."
+                  itemComponent={(itemProps) => (
+                    <ComboboxItem item={itemProps.item}>
+                      <ComboboxItemLabel>
+                        {itemProps.item.rawValue.label}
+                      </ComboboxItemLabel>
+                      <ComboboxItemIndicator />
+                    </ComboboxItem>
+                  )}
+                >
+                  <ComboboxControl>
+                    <ComboboxInput />
+                    <ComboboxTrigger />
+                  </ComboboxControl>
+                  <ComboboxContent />
+                </Combobox>
+              </div>
+              <Button
+                onClick={applyBulkAssignment}
+                disabled={bulkAssigneeId() === null}
+              >
+                Assign Selected
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setSelectedRows(new Set())}
+              >
+                Clear Selection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </Show>
+
+      {/* Assignment Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Assign Targets to Teacher/Volunteer</CardTitle>
+          <CardTitle>Target Assignments</CardTitle>
         </CardHeader>
-        <CardContent class="space-y-4">
-          {/* Step 1: Select targets */}
-          <div>
-            <h4 class="text-sm font-medium text-gray-700 mb-2">
-              Step 1: Select target users ({selectedTargetIds().size} selected)
-            </h4>
-            <div class="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead class="w-12">Select</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <Show
-                    when={unassignedTargets().length > 0}
-                    fallback={
-                      <TableRow>
-                        <TableCell colspan={4} class="text-center text-gray-500 py-6">
-                          All targets have been assigned
-                        </TableCell>
-                      </TableRow>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="w-12">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedRows().size > 0 &&
+                      selectedRows().size === props.targets.length
                     }
-                  >
-                    <For each={unassignedTargets()}>
-                      {(target) => {
-                        const isSelected = () => selectedTargetIds().has(target.userId);
-                        return (
-                          <TableRow
-                            class="cursor-pointer"
-                            classList={{ "bg-blue-50": isSelected() }}
-                            onClick={() => toggleTarget(target.userId)}
-                          >
-                            <TableCell>
-                              <input
-                                type="checkbox"
-                                checked={isSelected()}
-                                onChange={() => toggleTarget(target.userId)}
-                                onClick={(e) => e.stopPropagation()}
-                                class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div class="font-medium text-gray-900">{target.name}</div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{target.targetType}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span class="text-sm text-gray-500">Unassigned</span>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }}
-                    </For>
-                  </Show>
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          {/* Step 2: Choose assignee */}
-          <div>
-            <h4 class="text-sm font-medium text-gray-700 mb-2">
-              Step 2: Choose teacher or volunteer
-            </h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <For each={DUMMY_ASSIGNEES}>
-                {(assignee) => (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedAssignee(assignee.userId)}
-                    class={`p-3 border rounded-lg text-left transition-colors ${
-                      selectedAssignee() === assignee.userId
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div class="font-medium text-sm">{assignee.name}</div>
-                    <Badge variant="outline" class="mt-1 text-xs">
-                      {assignee.role}
-                    </Badge>
-                  </button>
+                    onChange={(e) => selectAll(e.currentTarget.checked)}
+                    class="cursor-pointer"
+                  />
+                </TableHead>
+                <TableHead>Target Name</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead class="w-64">Assigned To</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <For each={props.targets}>
+                {(target) => (
+                  <TableRow>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected(target.id)}
+                        onChange={() => toggleRow(target.id)}
+                        class="cursor-pointer"
+                      />
+                    </TableCell>
+                    <TableCell class="font-medium">{target.name}</TableCell>
+                    <TableCell>{target.phone}</TableCell>
+                    <TableCell>
+                      <Badge variant={target.type === "Teacher" ? "default" : "secondary"}>
+                        {target.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Combobox<AssigneeOption>
+                        options={assigneeOptions()}
+                        value={getAssignmentOption(target.id)}
+                        onChange={(option) => {
+                          if (option) {
+                            updateAssignment(target.id, option);
+                          }
+                        }}
+                        optionValue="value"
+                        optionTextValue="label"
+                        placeholder="Select assignee..."
+                        itemComponent={(itemProps) => (
+                          <ComboboxItem item={itemProps.item}>
+                            <ComboboxItemLabel>
+                              {itemProps.item.rawValue.label}
+                            </ComboboxItemLabel>
+                            <ComboboxItemIndicator />
+                          </ComboboxItem>
+                        )}
+                      >
+                        <ComboboxControl>
+                          <ComboboxInput />
+                          <ComboboxTrigger />
+                        </ComboboxControl>
+                        <ComboboxContent />
+                      </Combobox>
+                    </TableCell>
+                  </TableRow>
                 )}
               </For>
-            </div>
-          </div>
-
-          {/* Assign button */}
-          <div>
-            <Button
-              variant="default"
-              onClick={handleAssign}
-              disabled={selectedTargetIds().size === 0 || !selectedAssignee()}
-            >
-              Assign {selectedTargetIds().size} target{selectedTargetIds().size !== 1 ? "s" : ""} to{" "}
-              {selectedAssignee()
-                ? DUMMY_ASSIGNEES.find((a) => a.userId === selectedAssignee())?.name
-                : "..."}
-            </Button>
-          </div>
-
-          <p class="text-xs text-gray-500">
-            Note: This is dummy data. Backend integration will load real teachers/volunteers from the database.
-          </p>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <div class="flex justify-between items-center pt-4">
-        <Button variant="outline" onClick={props.onPrevious}>
-          Previous
-        </Button>
-        <div class="flex gap-2">
-          <Button variant="secondary" onClick={props.onSkip}>
-            Skip (Allow Self-Assignment)
-          </Button>
-          <Button variant="default" onClick={handleNext}>
-            Save Task
-          </Button>
-        </div>
+      {/* Action Buttons */}
+      <div class="flex justify-end gap-4">
+        <Button onClick={handleNext}>Next</Button>
       </div>
     </div>
   );
-};
+}

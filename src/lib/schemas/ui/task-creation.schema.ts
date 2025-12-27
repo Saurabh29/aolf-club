@@ -60,22 +60,37 @@ export const AssigneeSchema = z.object({
 export type Assignee = z.infer<typeof AssigneeSchema>;
 
 /**
- * Step 3: Assignment Mapping
- * Maps multiple targets to one assignee
+ * Step 3: Assignment State
+ * 
+ * Maps target user IDs to their assigned teacher/volunteer (or null if unassigned).
+ * This model supports:
+ * - Inline row edits in the table UI
+ * - Bulk assignment operations
+ * - Explicit unassigned state (null)
+ * - Easy diffing when saving
+ * 
+ * Example:
+ * {
+ *   "01HZXK7G2MEMBER1": "01HZXK7G2TEACHER001",  // Assigned to teacher
+ *   "01HZXK7G2MEMBER2": null,                   // Unassigned (for self-assignment)
+ *   "01HZXK7G2LEAD001": "01HZXK7G2VOLUNTEER01" // Assigned to volunteer
+ * }
+ */
+export const AssignmentStateSchema = z.record(
+  z.string().ulid(),           // targetUserId
+  z.string().ulid().nullable() // assigneeUserId or null for unassigned
+);
+export type AssignmentState = z.infer<typeof AssignmentStateSchema>;
+
+/**
+ * Legacy: Assignment Mapping for backend compatibility
+ * Converts from Record-based UI state to array format
  */
 export const AssignmentMappingSchema = z.object({
   assigneeUserId: z.string().ulid(),
   targetUserIds: z.array(z.string().ulid()),
 });
 export type AssignmentMapping = z.infer<typeof AssignmentMappingSchema>;
-
-/**
- * Step 3: Assignment Configuration
- */
-export const AssignmentConfigSchema = z.object({
-  assignments: z.array(AssignmentMappingSchema),
-});
-export type AssignmentConfig = z.infer<typeof AssignmentConfigSchema>;
 
 /**
  * Complete Task Form State (All Steps Combined)
@@ -85,7 +100,7 @@ export const TaskFormStateSchema = z.object({
   // Metadata
   taskId: z.string().ulid().optional(), // Present in EDIT mode, absent in NEW mode
   mode: z.enum(["NEW", "EDIT"]),
-  currentStep: z.number().int().min(1).max(4),
+  currentStep: z.number().int().min(1).max(3), // Reduced to 3 steps
   
   // Step 1: Definition
   definition: TaskDefinitionSchema.partial(), // Partial for draft state
@@ -93,8 +108,9 @@ export const TaskFormStateSchema = z.object({
   // Step 2: Targets
   selectedTargets: z.array(TargetUserSchema),
   
-  // Step 3: Assignments
-  assignments: z.array(AssignmentMappingSchema),
+  // Step 3: Assignments (Record-based for inline editing)
+  // Maps targetUserId -> assigneeUserId | null
+  assignments: AssignmentStateSchema,
   
   // Validation state
   step1Valid: z.boolean().default(false),
@@ -112,7 +128,7 @@ export function createNewTaskFormState(): TaskFormState {
     currentStep: 1,
     definition: {},
     selectedTargets: [],
-    assignments: [],
+    assignments: {}, // Empty record for new tasks
     step1Valid: false,
     step2Valid: false,
     step3Valid: false,
@@ -121,6 +137,7 @@ export function createNewTaskFormState(): TaskFormState {
 
 /**
  * Initialize state for EDIT task mode
+ * Converts backend AssignmentMapping[] to Record-based UI state
  */
 export function createEditTaskFormState(
   taskId: string,
@@ -128,16 +145,24 @@ export function createEditTaskFormState(
   targets: TargetUser[],
   assignments: AssignmentMapping[]
 ): TaskFormState {
+  // Convert AssignmentMapping[] to Record<targetUserId, assigneeUserId | null>
+  const assignmentState: AssignmentState = {};
+  for (const mapping of assignments) {
+    for (const targetId of mapping.targetUserIds) {
+      assignmentState[targetId] = mapping.assigneeUserId;
+    }
+  }
+  
   return {
     taskId,
     mode: "EDIT",
     currentStep: 1,
     definition,
     selectedTargets: targets,
-    assignments,
+    assignments: assignmentState,
     step1Valid: true,
     step2Valid: targets.length > 0,
-    step3Valid: assignments.length > 0,
+    step3Valid: true,
   };
 }
 
@@ -162,9 +187,31 @@ export function validateStep2(targets: TargetUser[]): boolean {
 
 /**
  * Validation helper: Check if Step 3 is complete
+ * Step 3 is always valid - unassigned targets are allowed for self-assignment
  */
-export function validateStep3(assignments: AssignmentMapping[]): boolean {
-  return assignments.length > 0 && assignments.every(a => a.targetUserIds.length > 0);
+export function validateStep3(assignments: AssignmentState): boolean {
+  return true; // Always valid - users can be left unassigned
+}
+
+/**
+ * Convert Record-based assignment state to AssignmentMapping[] for backend
+ * Groups targets by their assigned user
+ */
+export function convertToAssignmentMappings(assignments: AssignmentState): AssignmentMapping[] {
+  const mappings = new Map<string, string[]>();
+  
+  for (const [targetUserId, assigneeUserId] of Object.entries(assignments)) {
+    if (assigneeUserId) { // Only include assigned targets
+      const existing = mappings.get(assigneeUserId) || [];
+      existing.push(targetUserId);
+      mappings.set(assigneeUserId, existing);
+    }
+  }
+  
+  return Array.from(mappings.entries()).map(([assigneeUserId, targetUserIds]) => ({
+    assigneeUserId,
+    targetUserIds,
+  }));
 }
 
 /**
