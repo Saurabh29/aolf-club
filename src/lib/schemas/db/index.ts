@@ -11,3 +11,6 @@ export * from "./role.schema";
 export * from "./page.schema";
 export * from "./relationships";
 export * from "./inputs";
+
+// Task Outreach schemas
+export * from "./task-outreach.schema";

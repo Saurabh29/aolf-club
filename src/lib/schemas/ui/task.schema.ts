@@ -108,3 +108,145 @@ export const TaskReportSummarySchema = z.object({
 });
 
 export type TaskReportSummary = z.infer<typeof TaskReportSummarySchema>;
+
+/**
+ * ========== OUTREACH TASK SCHEMAS ==========
+ * Phase 2B: Task-based outreach system for teachers/volunteers
+ */
+
+/**
+ * Outreach Task Status
+ */
+export const OutreachTaskStatusSchema = z.enum(["OPEN", "IN_PROGRESS", "COMPLETED"]);
+export type OutreachTaskStatus = z.infer<typeof OutreachTaskStatusSchema>;
+
+/**
+ * Target Type - Who we're reaching out to
+ */
+export const TargetTypeSchema = z.enum(["MEMBER", "LEAD"]);
+export type TargetType = z.infer<typeof TargetTypeSchema>;
+
+/**
+ * Assignment Status
+ */
+export const AssignmentStatusSchema = z.enum(["PENDING", "DONE", "SKIPPED"]);
+export type AssignmentStatus = z.infer<typeof AssignmentStatusSchema>;
+
+/**
+ * Assignment Mode
+ */
+export const AssignmentModeSchema = z.enum(["CREATOR", "SELF"]);
+export type AssignmentMode = z.infer<typeof AssignmentModeSchema>;
+
+/**
+ * Allowed Actions - What actions volunteers can take
+ */
+export const AllowedActionsSchema = z.object({
+  call: z.boolean(),
+  message: z.boolean(),
+});
+export type AllowedActions = z.infer<typeof AllowedActionsSchema>;
+
+/**
+ * Actions Taken - What actions were actually performed
+ */
+export const ActionsTakenSchema = z.object({
+  called: z.boolean(),
+  messaged: z.boolean(),
+});
+export type ActionsTaken = z.infer<typeof ActionsTakenSchema>;
+
+/**
+ * Outreach Task - Full task details for Task Detail screen
+ */
+export const OutreachTaskSchema = z.object({
+  taskId: z.string().ulid(),
+  locationId: z.string().ulid(),
+  locationName: z.string(),
+  createdBy: z.string().ulid(),
+  createdByName: z.string(),
+  title: z.string().min(1).max(255),
+  status: OutreachTaskStatusSchema,
+  allowedActions: AllowedActionsSchema,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type OutreachTask = z.infer<typeof OutreachTaskSchema>;
+
+/**
+ * Task List Item - Summary for task list page
+ */
+export const OutreachTaskListItemSchema = z.object({
+  taskId: z.string().ulid(),
+  title: z.string(),
+  locationName: z.string(),
+  status: OutreachTaskStatusSchema,
+  allowedActions: AllowedActionsSchema,
+  totalTargets: z.number().int().min(0),
+  assignedCount: z.number().int().min(0),
+  createdAt: z.string().datetime(),
+});
+export type OutreachTaskListItem = z.infer<typeof OutreachTaskListItemSchema>;
+
+/**
+ * Interaction - Latest interaction state for a target user
+ */
+export const InteractionSchema = z.object({
+  actionsTaken: ActionsTakenSchema,
+  notes: z.string().max(2000).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  followUpAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime(),
+});
+export type Interaction = z.infer<typeof InteractionSchema>;
+
+/**
+ * Assigned User - User assigned to current volunteer with interaction state
+ */
+export const AssignedUserSchema = z.object({
+  targetUserId: z.string().ulid(),
+  name: z.string(),
+  phone: z.string(),
+  targetType: TargetTypeSchema,
+  assignedAt: z.string().datetime(),
+  status: AssignmentStatusSchema,
+  interaction: InteractionSchema.optional(),
+});
+export type AssignedUser = z.infer<typeof AssignedUserSchema>;
+
+/**
+ * Self-Assignment Request
+ */
+export const SelfAssignRequestSchema = z.object({
+  taskId: z.string().ulid(),
+  count: z.number().int().min(1).max(100),
+  filters: z
+    .object({
+      targetType: TargetTypeSchema.optional(),
+    })
+    .optional(),
+});
+export type SelfAssignRequest = z.infer<typeof SelfAssignRequestSchema>;
+
+/**
+ * Self-Assignment Result
+ */
+export const SelfAssignResultSchema = z.object({
+  assignedCount: z.number().int().min(0),
+  requestedCount: z.number().int().min(0),
+  message: z.string(),
+});
+export type SelfAssignResult = z.infer<typeof SelfAssignResultSchema>;
+
+/**
+ * Save Interaction Request
+ */
+export const SaveInteractionRequestSchema = z.object({
+  taskId: z.string().ulid(),
+  targetUserId: z.string().ulid(),
+  actionsTaken: ActionsTakenSchema,
+  notes: z.string().max(2000).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  followUpAt: z.string().datetime().optional(),
+});
+export type SaveInteractionRequest = z.infer<typeof SaveInteractionRequestSchema>;
