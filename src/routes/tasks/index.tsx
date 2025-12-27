@@ -125,12 +125,14 @@ export default function TasksList() {
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold text-gray-900">Tasks</h1>
-          <Button variant="default">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            New Task
-          </Button>
+          <A href="/tasks/new">
+            <Button variant="default">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              New Task
+            </Button>
+          </A>
         </div>
 
         <div class="space-y-4">
