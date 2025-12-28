@@ -4,7 +4,7 @@ import { StartAuthJS } from "start-authjs";
 import type { AuthRequestContext } from "start-authjs";
 import { getRequestEvent } from "solid-js/web";
 import { env } from "../config/env";
-import { getUserIdByEmail } from "~/server/db/repositories/email.repository";
+import { createOrGetOAuthUser, findUserByEmail } from "../services/auth.service";
 
 export const authConfig: StartAuthJSConfig = {
     secret: env.AUTH_SECRET,
@@ -20,6 +20,56 @@ export const authConfig: StartAuthJSConfig = {
         }),
     ],
     debug: true,
+    callbacks: {
+        signIn: async ({ user, account }) => {
+            try {
+                // Extract email from OAuth response
+                const emailAddress = user.email?.toLowerCase();
+                if (!emailAddress) {
+                    console.error("No email provided by OAuth provider");
+                    return false;
+                }
+
+                // Create or retrieve user
+                const result = await createOrGetOAuthUser(
+                    emailAddress,
+                    user.name || null,
+                    user.image || null,
+                    account?.provider,
+                );
+
+                if (result.isNewUser) {
+                    console.log("Created new user:", emailAddress);
+                } else {
+                    console.log("Existing user login:", emailAddress);
+                }
+
+                return true;
+            } catch (error) {
+                console.error("Error in signIn callback:", error);
+                return false;
+            }
+        },
+        jwt: async ({ token, user }) => {
+            // If we already have userId in token, skip DB lookup
+            if (token.userId) return token;
+
+            // During initial sign-in `user` may be present; try resolving userId
+            if (user?.email) {
+                const dbUser = await findUserByEmail(user.email);
+                if (dbUser) token.userId = dbUser.userId;
+            }
+
+            return token;
+        },
+        session: async ({ session, token }) => {
+            // Add user info to session from token
+            if (token.userId) {
+                (session as any).user.id = token.userId;
+            }
+            return session;
+        },
+    }
 };
 
 /**
@@ -57,16 +107,15 @@ export async function getCurrentUserId(): Promise<string> {
     }
 
     const session = await resp.json().catch(() => null);
-    const email = session?.user?.email as string | undefined;
 
-    if (!email) {
-        throw new Error("Authenticated session has no user email");
-    }
+    // Preferred: application `userId` should be stored on session.user.id by
+    // the `session` callback during sign-in. Fall back to other common keys.
+    const userId =
+        session?.user?.id || session?.user?.userId || session?.user?.sub || null;
 
-    const userId = await getUserIdByEmail(email.toLowerCase());
     if (!userId) {
-        throw new Error("No application user found for authenticated email");
+        throw new Error("Authenticated session does not contain application userId");
     }
 
-    return userId;
+    return userId as string;
 }
