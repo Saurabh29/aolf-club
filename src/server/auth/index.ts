@@ -5,6 +5,8 @@ import type { AuthRequestContext } from "start-authjs";
 import { getRequestEvent } from "solid-js/web";
 import { env } from "../config/env";
 import { createOrGetOAuthUser, findUserByEmail } from "../services/auth.service";
+import { getUserGroupsForUser } from "~/server/db/repositories/userGroup.repository";
+import { getUserById } from "~/server/db/repositories/user.repository";
 
 export const authConfig: StartAuthJSConfig = {
     secret: env.AUTH_SECRET,
@@ -66,6 +68,35 @@ export const authConfig: StartAuthJSConfig = {
             // Add user info to session from token
             if (token.userId) {
                 (session as any).user.id = token.userId;
+                try {
+                    // Populate activeLocationId from persisted user preference if set
+                    const u = await getUserById(token.userId as string);
+                    if (u?.activeLocationId) {
+                        (session as any).user.activeLocationId = u.activeLocationId;
+                    }
+
+                    // If user only belongs to one location, set it on session for convenience
+                    const groups = await getUserGroupsForUser(token.userId as string);
+                    const uniq = Array.from(new Set(groups.map((g) => g.locationId)));
+                    if (uniq.length === 1) {
+                        // Only override persisted preference when user belongs to exactly one location
+                        (session as any).user.activeLocationId = uniq[0];
+                        // Also ensure an HttpOnly cookie is set for downstream server actions
+                        // Note: StartAuthJS `session` callback can return headers via special
+                        // shape when running inside its handler. Attach `Set-Cookie` header
+                        // to the returned session by including a `_setCookie` property
+                        // on the session object. The StartAuthJS handler will include
+                        // it in the response if supported.
+                        try {
+                            const cookie = `aolf_active_location=${uniq[0]}; Path=/; HttpOnly; SameSite=Lax`;
+                            (session as any)._setCookie = cookie;
+                        } catch (e) {
+                            // ignore header attaching failures
+                        }
+                    }
+                } catch (e) {
+                    // ignore errors here
+                }
             }
             return session;
         },

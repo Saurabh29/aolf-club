@@ -96,7 +96,7 @@ export async function getUserById(userId: string): Promise<User | null> {
  */
 export async function updateUser(
   userId: string,
-  updates: Partial<Pick<User, "displayName" | "userType" | "isAdmin" | "image" | "email">>
+  updates: Partial<Pick<User, "displayName" | "userType" | "isAdmin" | "image" | "email" | "activeLocationId">>
 ): Promise<User> {
   const timestamp = now();
 
@@ -115,6 +115,12 @@ export async function updateUser(
     updateParts.push("#email = :email");
     expressionAttributeNames["#email"] = "email";
     expressionAttributeValues[":email"] = updates.email;
+  }
+
+  if (updates.activeLocationId !== undefined) {
+    updateParts.push("#activeLocationId = :activeLocationId");
+    expressionAttributeNames["#activeLocationId"] = "activeLocationId";
+    expressionAttributeValues[":activeLocationId"] = updates.activeLocationId;
   }
 
   if (updates.image !== undefined) {

@@ -21,6 +21,8 @@ import {
   getLocationByCode as getLocationByCodeRepo,
   updateLocation as updateLocationRepo,
 } from "~/server/db/repositories/location.repository";
+import { getRequestEvent } from "solid-js/web";
+import { getUserGroupsForUser } from "~/server/db/repositories/userGroup.repository";
 import {
   createUserGroup,
   addUserToGroup,
@@ -281,6 +283,45 @@ export async function getLocationByCode(
 }
 
 /**
+ * Get all locations the current authenticated user belongs to.
+ * Returns an array of { id, name, locationId } objects.
+ */
+export async function getUserLocations(): Promise<ActionResult<{ locations: Array<{ id: string; name: string }>; activeLocationId?: string }>> {
+  "use server";
+
+  try {
+    const userId = await getCurrentUserId();
+
+    const groups = await getUserGroupsForUser(userId);
+    const uniqueLocationIds = Array.from(new Set(groups.map((g) => g.locationId)));
+
+    const locations: Array<{ id: string; name: string }> = [];
+    for (const lid of uniqueLocationIds) {
+      const loc = await getLocationByIdRepo(lid);
+      if (loc) locations.push({ id: loc.locationId, name: loc.name });
+    }
+
+    // Read activeLocationId from cookie if present
+    let activeLocationId: string | undefined = undefined;
+    try {
+      const ev = getRequestEvent?.();
+      if (ev) {
+        const cookieHeader = ev.request.headers.get("cookie") || "";
+        const match = cookieHeader.match(/(?:^|; )aolf_active_location=([^;]+)/);
+        if (match) activeLocationId = decodeURIComponent(match[1]);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return { success: true, data: { locations, activeLocationId } };
+  } catch (error) {
+    console.error("[getUserLocations] Failed:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch user locations" };
+  }
+}
+
+/**
  * Soft-deletes a location by setting its status to "inactive".
  * 
  * @param locationId - ULID of the location to delete
@@ -373,5 +414,33 @@ export async function updateLocation(
       success: false,
       error: error instanceof Error ? error.message : "Failed to update location",
     };
+  }
+}
+
+/**
+ * Persist the active location selection to the authenticated user's profile.
+ * The client should call this when the user selects an active location.
+ */
+export async function setActiveLocation(locationId: string | null): Promise<ActionResult<{ updated: true }>> {
+  "use server";
+
+  try {
+    // validate locationId if present
+    if (locationId && !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
+      return { success: false, error: "Invalid location ID" };
+    }
+
+    // Resolve current user and persist the active location
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    await import("~/server/db/repositories/user.repository").then((m) => m.updateUser(userId, { activeLocationId: locationId ?? undefined }));
+
+    return { success: true, data: { updated: true } };
+  } catch (error) {
+    console.error("[setActiveLocation] Failed:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to set active location" };
   }
 }

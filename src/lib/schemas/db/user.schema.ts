@@ -10,6 +10,7 @@ export const UserSchema = z.object({
   image: z.string().url().optional(),
   phone: z.string().optional(),
   locationId: z.string().ulid().optional(),
+  activeLocationId: z.string().ulid().optional(),
   userType: UserTypeEnum,
   isAdmin: z.boolean().default(false),
   createdAt: z.string().datetime(),

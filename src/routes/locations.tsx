@@ -21,6 +21,17 @@ export default function LocationsPage() {
   // Track if we're on client side
   const [isClient, setIsClient] = createSignal(false);
   onMount(() => setIsClient(true));
+  // If URL contains ?create=1 open the AddLocationDialog on client
+  onMount(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("create") === "1") {
+        setIsDialogOpen(true);
+      }
+    } catch (e) {
+      // ignore on server
+    }
+  });
 
   // Fetch locations using SolidJS createResource
   const [locations, { refetch }] = createResource(async () => {
