@@ -13,7 +13,7 @@ export type UserType = z.infer<typeof UserTypeEnum>;
 /**
  * Group types (ReBAC core - determines base permissions)
  */
-export const GroupTypeEnum = z.enum(["TEACHER", "VOLUNTEER"]);
+export const GroupTypeEnum = z.enum(["ADMIN", "TEACHER", "VOLUNTEER"]);
 export type GroupType = z.infer<typeof GroupTypeEnum>;
 
 /**

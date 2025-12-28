@@ -22,6 +22,12 @@ import {
   updateLocation as updateLocationRepo,
 } from "~/server/db/repositories/location.repository";
 import {
+  createUserGroup,
+  addUserToGroup,
+} from "~/server/db/repositories/userGroup.repository";
+import { assignRoleToGroup, createRole } from "~/server/db/repositories/permission.repository";
+import { getCurrentUserId } from "~/server/auth";
+import {
   AddLocationFormSchema,
   type AddLocationForm,
   type LocationUi,
@@ -105,6 +111,34 @@ export async function createLocation(
 
     // Create the location in DynamoDB
     const dbLocation = await createLocationRepo(createInput);
+
+    try {
+      // Create standard groups for the location
+      const adminGroup = await createUserGroup({ locationId: dbLocation.locationId, groupType: "ADMIN", name: "Admin" });
+      const teacherGroup = await createUserGroup({ locationId: dbLocation.locationId, groupType: "TEACHER", name: "Teacher" });
+      const volunteerGroup = await createUserGroup({ locationId: dbLocation.locationId, groupType: "VOLUNTEER", name: "Volunteer" });
+
+      // Ensure roles exist (idempotent createRole via repository will throw if exists)
+      try { await createRole({ roleName: "Admin", description: "Location admin role" }); } catch (e) {}
+      try { await createRole({ roleName: "Teacher", description: "Location teacher role" }); } catch (e) {}
+      try { await createRole({ roleName: "Volunteer", description: "Location volunteer role" }); } catch (e) {}
+
+      // Assign roles to groups
+      await assignRoleToGroup(adminGroup.groupId, "Admin");
+      await assignRoleToGroup(teacherGroup.groupId, "Teacher");
+      await assignRoleToGroup(volunteerGroup.groupId, "Volunteer");
+
+      // Add the creator user to Admin group
+      try {
+        const userId = await getCurrentUserId();
+        await addUserToGroup(userId, adminGroup.groupId, { locationId: dbLocation.locationId, groupType: "ADMIN" });
+      } catch (e) {
+        // If auth not available or addition fails, log and continue
+        console.warn("Failed to add creator to admin group:", e);
+      }
+    } catch (err) {
+      console.error("Failed to create default groups/roles for location:", err);
+    }
 
     // Transform to UI shape and return
     return {
