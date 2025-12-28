@@ -42,13 +42,7 @@ export default function Home() {
         </h1>
         <p class="text-xl mb-8">Welcome to the AOLF Club Management System</p>
         <div class="flex flex-col gap-4 items-center">
-          <a
-            href="/api/auth/signin"
-            rel="external"
-            class="inline-block rounded-lg bg-sky-600 px-8 py-3 font-semibold text-white hover:bg-sky-700 transition-colors"
-          >
-            Sign In to Continue
-          </a>
+          <p class="text-sm text-gray-600">Use the <strong>Sign In</strong> button at the top-right to sign in.</p>
         </div>
       </main>
     </Show>

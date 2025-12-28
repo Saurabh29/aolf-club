@@ -17,7 +17,6 @@
  */
 
 import dotenv from "dotenv";
-import { env } from "~/server/config/env";
 import {
   DynamoDBClient,
   ListTablesCommand,
@@ -27,100 +26,104 @@ import {
   KeySchemaElement,
   AttributeDefinition,
 } from "@aws-sdk/client-dynamodb";
-
+// Use an async IIFE so we can load dotenv before importing app env
 dotenv.config();
 
-const TABLE_NAME = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
-const AWS_REGION = env.AWS_REGION ?? "us-east-1";
-const DYNAMODB_ENDPOINT = env.DYNAMODB_ENDPOINT;
+(async () => {
+  const { env } = await import("~/server/config/env");
 
-function createClient() {
-  const isLocal = !!DYNAMODB_ENDPOINT;
-  if (isLocal) {
-    console.log(`Using local DynamoDB endpoint: ${DYNAMODB_ENDPOINT}`);
-    return new DynamoDBClient({
-      region: AWS_REGION,
-      endpoint: DYNAMODB_ENDPOINT,
-      credentials: { accessKeyId: "local", secretAccessKey: "local" },
-    });
+  const TABLE_NAME = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
+  const AWS_REGION = env.AWS_REGION ?? "us-east-1";
+  const DYNAMODB_ENDPOINT = env.DYNAMODB_ENDPOINT;
+
+  function createClient() {
+    const isLocal = !!DYNAMODB_ENDPOINT;
+    if (isLocal) {
+      console.log(`Using local DynamoDB endpoint: ${DYNAMODB_ENDPOINT}`);
+      return new DynamoDBClient({
+        region: AWS_REGION,
+        endpoint: DYNAMODB_ENDPOINT,
+        credentials: { accessKeyId: "local", secretAccessKey: "local" },
+      });
+    }
+    console.log(`Using AWS region: ${AWS_REGION}`);
+    return new DynamoDBClient({ region: AWS_REGION });
   }
-  console.log(`Using AWS region: ${AWS_REGION}`);
-  return new DynamoDBClient({ region: AWS_REGION });
-}
 
-async function run() {
-  const client = createClient();
+  async function run() {
+    const client = createClient();
 
-  try {
-    console.log("Listing tables...");
-    const listResp = await client.send(new ListTablesCommand({}));
-    const tables = listResp.TableNames ?? [];
+    try {
+      console.log("Listing tables...");
+      const listResp = await client.send(new ListTablesCommand({}));
+      const tables = listResp.TableNames ?? [];
 
-    if (tables.length === 0) {
-      console.log("No tables found.");
-    } else {
-      console.log(`Found ${tables.length} table(s):`, tables.join(", "));
+      if (tables.length === 0) {
+        console.log("No tables found.");
+      } else {
+        console.log(`Found ${tables.length} table(s):`, tables.join(", "));
 
-      // Safety: If not running against local endpoint, prompt the user
-      if (!DYNAMODB_ENDPOINT) {
-        console.error(
-          "DYNAMODB_ENDPOINT is not set. Aborting to avoid deleting remote tables."
-        );
-        process.exit(1);
+        // Safety: If not running against local endpoint, prompt the user
+        if (!DYNAMODB_ENDPOINT) {
+          console.error(
+            "DYNAMODB_ENDPOINT is not set. Aborting to avoid deleting remote tables."
+          );
+          process.exit(1);
+        }
+
+        // Delete all tables
+        for (const t of tables) {
+          try {
+            console.log(`Deleting table: ${t}`);
+            await client.send(new DeleteTableCommand({ TableName: t }));
+            console.log(`Requested deletion for table ${t}`);
+          } catch (err) {
+            console.error(`Failed to delete table ${t}:`, err);
+          }
+        }
+
+        // Wait briefly for deletions to propagate in local environment
+        await new Promise((r) => setTimeout(r, 1200));
       }
 
-      // Delete all tables
-      for (const t of tables) {
-        try {
-          console.log(`Deleting table: ${t}`);
-          await client.send(new DeleteTableCommand({ TableName: t }));
-          console.log(`Requested deletion for table ${t}`);
-        } catch (err) {
-          console.error(`Failed to delete table ${t}:`, err);
+      // Create the single-table
+      console.log(`Creating table: ${TABLE_NAME}`);
+
+      const attributeDefinitions: AttributeDefinition[] = [
+        { AttributeName: "PK", AttributeType: ScalarAttributeType.S },
+        { AttributeName: "SK", AttributeType: ScalarAttributeType.S },
+      ];
+
+      const keySchema: KeySchemaElement[] = [
+        { AttributeName: "PK", KeyType: "HASH" },
+        { AttributeName: "SK", KeyType: "RANGE" },
+      ];
+
+      const createParams = {
+        TableName: TABLE_NAME,
+        AttributeDefinitions: attributeDefinitions,
+        KeySchema: keySchema,
+        BillingMode: "PAY_PER_REQUEST" as const,
+      };
+
+      try {
+        await client.send(new CreateTableCommand(createParams));
+        console.log(`CreateTable requested for ${TABLE_NAME}`);
+      } catch (err: any) {
+        if (err?.name === "ResourceInUseException") {
+          console.log(`Table ${TABLE_NAME} already exists.`);
+        } else {
+          console.error("Failed to create table:", err);
+          process.exit(1);
         }
       }
 
-      // Wait briefly for deletions to propagate in local environment
-      await new Promise((r) => setTimeout(r, 1200));
+      console.log("Done.");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      process.exit(1);
     }
-
-    // Create the single-table
-    console.log(`Creating table: ${TABLE_NAME}`);
-
-    const attributeDefinitions: AttributeDefinition[] = [
-      { AttributeName: "PK", AttributeType: ScalarAttributeType.S },
-      { AttributeName: "SK", AttributeType: ScalarAttributeType.S },
-    ];
-
-    const keySchema: KeySchemaElement[] = [
-      { AttributeName: "PK", KeyType: "HASH" },
-      { AttributeName: "SK", KeyType: "RANGE" },
-    ];
-
-    const createParams = {
-      TableName: TABLE_NAME,
-      AttributeDefinitions: attributeDefinitions,
-      KeySchema: keySchema,
-      BillingMode: "PAY_PER_REQUEST" as const,
-    };
-
-    try {
-      await client.send(new CreateTableCommand(createParams));
-      console.log(`CreateTable requested for ${TABLE_NAME}`);
-    } catch (err: any) {
-      if (err?.name === "ResourceInUseException") {
-        console.log(`Table ${TABLE_NAME} already exists.`);
-      } else {
-        console.error("Failed to create table:", err);
-        process.exit(1);
-      }
-    }
-
-    console.log("Done.");
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    process.exit(1);
   }
-}
 
-run();
+  await run();
+})();
