@@ -136,9 +136,23 @@ export const Keys = {
   /**
    * Generate PK for a Page item.
    * @param pageName - Name of the page
-   * @returns PK in format "PAGE#<pageName>"
-   */
-  pagePK: (pageName: string): string => `PAGE#${pageName}`,
+    * @param pageId - ULID of the page
+    * @returns PK in format "PAGE#<pageId>"
+    */
+    pagePK: (pageId: string): string => `PAGE#${pageId}`,
+    /**
+     * Generate PK for page name identity mapping.
+     * @param pageName - human-readable page name
+     * @returns PK in format `PAGE_NAME#<pageName>`
+     */
+    pageNamePK: (pageName: string): string => `PAGE_NAME#${pageName}`,
+
+    /**
+    * Generate SK for Role→Page edges.
+    * @param pageId - ULID of the page
+    * @returns SK in format "PAGE#<pageId>"
+    */
+    pageSK: (pageId: string): string => `PAGE#${pageId}`,
 
   // ===========================================================================
   // SK VALUES
@@ -178,12 +192,7 @@ export const Keys = {
    */
   roleSK: (roleName: string): string => `ROLE#${roleName}`,
 
-  /**
-   * Generate SK for Role→Page edges.
-   * @param pageName - Name of the page
-   * @returns SK in format "PAGE#<pageName>"
-   */
-  pageSK: (pageName: string): string => `PAGE#${pageName}`,
+  // pageSK is defined earlier to use pageId; keep single definition
 
   // ===========================================================================
   // SK PREFIXES (for Query operations with begins_with)

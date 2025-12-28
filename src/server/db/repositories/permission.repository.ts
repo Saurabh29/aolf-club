@@ -6,6 +6,7 @@
  */
 
 import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { ulid } from "ulid";
 import { docClient, TABLE_NAME, Keys, now } from "~/server/db/client";
 import {
   RoleSchema,
@@ -110,9 +111,11 @@ export async function getRoleByName(roleName: string): Promise<Role | null> {
 export async function createPage(input: CreatePageInput): Promise<Page> {
   const timestamp = now();
 
+  const pageId = ulid();
   const page: Page = {
-    PK: Keys.pagePK(input.pageName),
+    PK: Keys.pagePK(pageId),
     SK: Keys.metaSK(),
+    pageId,
     pageName: input.pageName,
     description: input.description,
     createdAt: timestamp,
@@ -125,6 +128,21 @@ export async function createPage(input: CreatePageInput): Promise<Page> {
       new PutCommand({
         TableName: TABLE_NAME,
         Item: validated,
+        ConditionExpression: "attribute_not_exists(PK)",
+      })
+    );
+
+    // Also create a name -> id identity mapping for quick lookups
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          PK: Keys.pageNamePK(input.pageName),
+          SK: Keys.metaSK(),
+          pageId,
+          pageName: input.pageName,
+          createdAt: timestamp,
+        },
         ConditionExpression: "attribute_not_exists(PK)",
       })
     );
@@ -149,21 +167,38 @@ export async function createPage(input: CreatePageInput): Promise<Page> {
  */
 export async function getPageByName(pageName: string): Promise<Page | null> {
   try {
-    const result = await docClient.send(
+    // Look up the page name -> pageId identity item first
+    const idResult = await docClient.send(
       new GetCommand({
         TableName: TABLE_NAME,
         Key: {
-          PK: Keys.pagePK(pageName),
+          PK: Keys.pageNamePK(pageName),
           SK: Keys.metaSK(),
         },
       })
     );
 
-    if (!result.Item) {
+    if (!idResult.Item) {
       return null;
     }
 
-    return PageSchema.parse(result.Item);
+    const pageId = idResult.Item.pageId as string | undefined;
+    if (!pageId) return null;
+
+    // Fetch the actual Page item by pageId
+    const pageResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: Keys.pagePK(pageId),
+          SK: Keys.metaSK(),
+        },
+      })
+    );
+
+    if (!pageResult.Item) return null;
+
+    return PageSchema.parse(pageResult.Item);
   } catch (error) {
     console.error("[getPageByName] Failed:", error);
     throw new Error(
@@ -260,17 +295,19 @@ export async function getRolesForGroup(groupId: string): Promise<string[]> {
  */
 export async function setRolePagePermission(
   roleName: string,
+  pageId: string,
   pageName: string,
-  permission: Permission
+  permission: Permission | { access: "ALLOW" | "DENY" }
 ): Promise<void> {
   const timestamp = now();
 
   const perm: RolePagePermission = {
     PK: Keys.rolePK(roleName),
-    SK: Keys.pageSK(pageName),
+    SK: Keys.pageSK(pageId),
     roleName,
+    pageId,
     pageName,
-    permission,
+    permission: typeof permission === "string" ? { access: permission } : permission,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -301,14 +338,14 @@ export async function setRolePagePermission(
  * @param pageName - Name of the page
  * @returns true if ALLOW, false otherwise
  */
-export async function canRoleAccessPage(roleName: string, pageName: string): Promise<boolean> {
+export async function canRoleAccessPage(roleName: string, pageId: string): Promise<boolean> {
   try {
     const result = await docClient.send(
       new GetCommand({
         TableName: TABLE_NAME,
         Key: {
           PK: Keys.rolePK(roleName),
-          SK: Keys.pageSK(pageName),
+          SK: Keys.pageSK(pageId),
         },
       })
     );
@@ -318,7 +355,8 @@ export async function canRoleAccessPage(roleName: string, pageName: string): Pro
     }
 
     const permission = RolePagePermissionSchema.parse(result.Item);
-    return permission.permission === "ALLOW";
+    const access = permission.permission?.access ?? (permission as any).permission;
+    return access === "ALLOW";
   } catch (error) {
     console.error("[canRoleAccessPage] Failed:", error);
     return false;
@@ -335,7 +373,7 @@ export async function canRoleAccessPage(roleName: string, pageName: string): Pro
  */
 export async function getPagePermissionsForRole(
   roleName: string
-): Promise<Array<{ pageName: string; permission: Permission }>> {
+): Promise<Array<{ pageName: string; pageId: string; permission: { access: "ALLOW" | "DENY" } }>> {
   try {
     const result = await docClient.send(
       new QueryCommand({
@@ -356,7 +394,8 @@ export async function getPagePermissionsForRole(
       const perm = RolePagePermissionSchema.parse(item);
       return {
         pageName: perm.pageName,
-        permission: perm.permission,
+        pageId: perm.pageId,
+        permission: perm.permission ?? { access: (perm as any).permission },
       };
     });
   } catch (error) {

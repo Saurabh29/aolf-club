@@ -107,10 +107,13 @@ export type GroupRoleEdge = z.infer<typeof GroupRoleEdgeSchema>;
  */
 export const RolePagePermissionSchema = z.object({
   PK: z.string().regex(/^ROLE#.+$/),
-  SK: z.string().regex(/^PAGE#.+$/),
+  // SK now uses PAGE#<ulid>
+  SK: z.string().regex(/^PAGE#[0-9A-Z]{26}$/),
   roleName: z.string(),
+  pageId: z.string().ulid(),
   pageName: z.string(),
-  permission: PermissionEnum,
+  // permission is now an object with access and optional metadata
+  permission: z.object({ access: z.enum(["ALLOW", "DENY"]) }).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

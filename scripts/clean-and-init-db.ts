@@ -119,8 +119,32 @@ dotenv.config();
       }
 
       console.log("Done.");
-    } catch (err) {
-      console.error("Unexpected error:", err);
+
+      // Run role/page/permission seeding after table creation
+      try {
+        const seedModule = await import("./seed-roles-permissions");
+        if (seedModule && typeof seedModule.seed === "function") {
+          await seedModule.seed();
+        } else if (seedModule && typeof seedModule.default === "function") {
+          await seedModule.default();
+        } else {
+          console.warn("seed-roles-permissions did not export a callable seed function");
+        }
+      } catch (err: any) {
+        try {
+          console.error("Failed to run seed-roles-permissions:", err?.message ?? String(err));
+          if (err?.stack) console.error(err.stack);
+        } catch (e) {
+          console.error("Failed to run seed-roles-permissions: <unknown error>");
+        }
+      }
+    } catch (err: any) {
+      try {
+        console.error("Unexpected error:", err?.message ?? String(err));
+        if (err?.stack) console.error(err.stack);
+      } catch (e) {
+        console.error("Unexpected error: <unknown>");
+      }
       process.exit(1);
     }
   }
