@@ -7,7 +7,6 @@
 
 "use server";
 
-import { getRequestEvent } from "solid-js/web";
 import { redirect } from "@solidjs/router";
 import type {
   OutreachTask,
@@ -23,15 +22,7 @@ import * as taskRepo from "~/server/db/repositories/task-outreach.repository";
 /**
  * Get current authenticated user ID from session
  */
-async function getCurrentUserId(): Promise<string> {
-  // TODO: Implement proper session handling with start-authjs
-  // For now, return a test user ID for development
-  // In production, this should:
-  // 1. Get session from start-authjs
-  // 2. Look up user by email from DynamoDB
-  // 3. Return the userId
-  return "01JJBK6XQZTEST1234567890"; // Test ULID
-}
+import { getCurrentUserId } from "~/server/auth";
 
 /**
  * Fetch all tasks assigned to the current user
