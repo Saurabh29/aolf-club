@@ -57,6 +57,8 @@ export async function createOrGetOAuthUser(
     displayName: name || normalizedEmail.split("@")[0],
     userType: "MEMBER",
     isAdmin: false,
+    email: normalizedEmail,
+    image: imageUrl || undefined,
   };
 
   const user = await createUser(userInput);

@@ -17,6 +17,8 @@ export const CreateUserInputSchema = z.object({
   displayName: z.string().min(1).max(255),
   userType: UserTypeEnum.default("MEMBER"),
   isAdmin: z.boolean().default(false),
+  email: z.string().email().optional(),
+  image: z.string().url().optional(),
 });
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 

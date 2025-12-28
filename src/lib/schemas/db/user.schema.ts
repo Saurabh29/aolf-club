@@ -7,6 +7,7 @@ export const UserSchema = z.object({
   userId: z.string().ulid(),
   displayName: z.string().min(1).max(255),
   email: z.string().email().optional(),
+  image: z.string().url().optional(),
   phone: z.string().optional(),
   locationId: z.string().ulid().optional(),
   userType: UserTypeEnum,

@@ -28,6 +28,8 @@ export async function createUser(input: CreateUserInput): Promise<User> {
     SK: Keys.metaSK(),
     userId,
     displayName: input.displayName,
+    email: input.email,
+    image: input.image,
     userType: input.userType,
     isAdmin: input.isAdmin,
     createdAt: timestamp,
@@ -94,7 +96,7 @@ export async function getUserById(userId: string): Promise<User | null> {
  */
 export async function updateUser(
   userId: string,
-  updates: Partial<Pick<User, "displayName" | "userType" | "isAdmin">>
+  updates: Partial<Pick<User, "displayName" | "userType" | "isAdmin" | "image" | "email">>
 ): Promise<User> {
   const timestamp = now();
 
@@ -107,6 +109,18 @@ export async function updateUser(
     updateParts.push("#displayName = :displayName");
     expressionAttributeNames["#displayName"] = "displayName";
     expressionAttributeValues[":displayName"] = updates.displayName;
+  }
+
+  if (updates.email !== undefined) {
+    updateParts.push("#email = :email");
+    expressionAttributeNames["#email"] = "email";
+    expressionAttributeValues[":email"] = updates.email;
+  }
+
+  if (updates.image !== undefined) {
+    updateParts.push("#image = :image");
+    expressionAttributeNames["#image"] = "image";
+    expressionAttributeValues[":image"] = updates.image;
   }
 
   if (updates.userType !== undefined) {
