@@ -29,6 +29,7 @@ import {
   type TaskAssignmentItem,
   type InteractionItem,
   type LocationTaskIndex,
+  type UserTaskAssignmentIndex,
   taskPK,
   targetSK,
   assignmentSK,
@@ -605,4 +606,219 @@ export async function getUnassignedCount(taskId: string): Promise<number> {
   const unassignedCount = targets.filter((t) => !assignedTargetIds.has(t.targetUserId)).length;
 
   return unassignedCount;
+}
+
+/**
+ * Get tasks assigned to a user
+ * Query: USER#userId + SK begins_with TASKASSIGNMENT#
+ */
+export async function getTasksAssignedToUser(userId: string): Promise<OutreachTaskListItem[]> {
+  const params: QueryCommandInput = {
+    TableName: TABLE_NAME,
+    KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+    ExpressionAttributeValues: {
+      ":pk": userPK(userId),
+      ":skPrefix": "TASKASSIGNMENT#",
+    },
+  };
+
+  const result = await docClient.send(new QueryCommand(params));
+  const assignments = (result.Items || []) as TaskAssignmentItem[];
+
+  // Get unique task IDs
+  const taskIds = [...new Set(assignments.map(a => a.taskId))];
+
+  // Batch get task details
+  const tasks = await Promise.all(
+    taskIds.map(taskId => getTaskById(taskId))
+  );
+
+  // Convert to OutreachTaskListItem with counts
+  const taskListItems: OutreachTaskListItem[] = [];
+  
+  for (const task of tasks) {
+    if (!task) continue;
+
+    const [targets, allAssignments] = await Promise.all([
+      getTaskTargets(task.taskId),
+      getAllAssignments(task.taskId),
+    ]);
+
+    taskListItems.push({
+      taskId: task.taskId,
+      title: task.title,
+      locationName: task.locationName,
+      status: task.status,
+      allowedActions: task.allowedActions,
+      totalTargets: targets.length,
+      assignedCount: allAssignments.length,
+      createdAt: task.createdAt,
+    });
+  }
+
+  return taskListItems;
+}
+
+/**
+ * Create a new outreach task with targets and assignments
+ */
+export async function createTask(
+  createdBy: string,
+  definition: { title: string; locationId: string; allowedActions: { call: boolean; message: boolean }; callScript?: string; messageTemplate?: string },
+  targetUserIds: string[],
+  assignments?: Array<{ assigneeUserId: string; targetUserIds: string[] }>
+): Promise<string> {
+  const taskId = ulid();
+  const now = new Date().toISOString();
+
+  // Get location details for locationName
+  const locationResult = await docClient.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      PK: `LOCATION#${definition.locationId}`,
+      SK: `METADATA`,
+    },
+  }));
+
+  const locationName = locationResult.Item?.name || "Unknown Location";
+
+  // Get creator name
+  const creatorResult = await docClient.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      PK: `USER#${createdBy}`,
+      SK: `METADATA`,
+    },
+  }));
+
+  const createdByName = creatorResult.Item?.name || "Unknown User";
+
+  // Prepare items for transaction
+  const transactItems: any[] = [];
+
+  // 1. Task item
+  const taskItem: TaskItem = {
+    PK: taskPK(taskId),
+    SK: "META",
+    itemType: "TASK",
+    taskId,
+    locationId: definition.locationId,
+    title: definition.title,
+    allowedActions: definition.allowedActions,
+    status: "OPEN",
+    createdBy,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  transactItems.push({
+    Put: {
+      TableName: TABLE_NAME,
+      Item: taskItem,
+    },
+  });
+
+  // 2. Location index
+  transactItems.push({
+    Put: {
+      TableName: TABLE_NAME,
+      Item: {
+        PK: locationPK(definition.locationId),
+        SK: locationTaskSK(taskId),
+        itemType: "LOCATION_TASK_INDEX",
+        taskId,
+        locationId: definition.locationId,
+        title: definition.title,
+        status: "OPEN",
+        createdAt: now,
+      } as LocationTaskIndex,
+    },
+  });
+
+  // 3. Task target items
+  for (const targetUserId of targetUserIds) {
+    // Get target user details
+    const userResult = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `USER#${targetUserId}`,
+        SK: `METADATA`,
+      },
+    }));
+
+    const userName = userResult.Item?.name || "Unknown User";
+    const userPhone = userResult.Item?.phone;
+    const userType = userResult.Item?.role === "TEACHER" ? "LEAD" : "MEMBER";
+
+    transactItems.push({
+      Put: {
+        TableName: TABLE_NAME,
+        Item: {
+          PK: taskPK(taskId),
+          SK: targetSK(targetUserId),
+          itemType: "TASK_TARGET",
+          taskId,
+          targetUserId,
+          targetType: userType,
+          addedAt: now,
+        } as TaskTargetItem,
+      },
+    });
+  }
+
+  // 4. Assignment items (if provided)
+  if (assignments) {
+    for (const assignment of assignments) {
+      for (const targetUserId of assignment.targetUserIds) {
+        const assignmentId = ulid();
+
+        // Task assignment
+        transactItems.push({
+          Put: {
+            TableName: TABLE_NAME,
+            Item: {
+              PK: taskPK(taskId),
+              SK: assignmentSK(assignment.assigneeUserId, targetUserId),
+              itemType: "TASK_ASSIGNMENT",
+              taskId,
+              assigneeUserId: assignment.assigneeUserId,
+              targetUserId,
+              assignedBy: "CREATOR",
+              assignedAt: now,
+              status: "PENDING",
+            } as TaskAssignmentItem,
+          },
+        });
+
+        // User assignment index
+        transactItems.push({
+          Put: {
+            TableName: TABLE_NAME,
+            Item: {
+              PK: userPK(assignment.assigneeUserId),
+              SK: userTaskAssignmentSK(taskId),
+              itemType: "USER_TASK_INDEX",
+              userId: assignment.assigneeUserId,
+              taskId,
+              taskTitle: definition.title,
+              locationId: definition.locationId,
+              assignedAt: now,
+              status: "PENDING",
+            } as UserTaskAssignmentIndex,
+          },
+        });
+      }
+    }
+  }
+
+  // Execute transaction in batches (DynamoDB limit is 100 items per transaction)
+  const batchSize = 100;
+  for (let i = 0; i < transactItems.length; i += batchSize) {
+    const batch = transactItems.slice(i, i + batchSize);
+    await docClient.send(new TransactWriteCommand({
+      TransactItems: batch,
+    }));
+  }
+
+  return taskId;
 }

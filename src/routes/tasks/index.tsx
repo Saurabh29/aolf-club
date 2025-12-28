@@ -3,78 +3,30 @@
  * 
  * Displays all outreach tasks for the current location.
  * Users can view and navigate to task details.
- * 
- * Phase 2A: UI shell with dummy data only
  */
 
-import { Show, createSignal, onMount, For } from "solid-js";
-import { A, useNavigate } from "@solidjs/router";
+import { Show, createSignal, onMount, For, createResource } from "solid-js";
+import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-
-// Dummy task data
-interface TaskListItem {
-  taskId: string;
-  title: string;
-  locationName: string;
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED";
-  allowedActions: {
-    call: boolean;
-    message: boolean;
-  };
-  totalTargets: number;
-  assignedCount: number;
-  createdAt: string;
-}
-
-const DUMMY_TASKS: TaskListItem[] = [
-  {
-    taskId: "01JGAB12XYZ9876543210ABC",
-    title: "Weekly Follow-ups - January 2025",
-    locationName: "Bangalore Center",
-    status: "IN_PROGRESS",
-    allowedActions: { call: true, message: true },
-    totalTargets: 142,
-    assignedCount: 87,
-    createdAt: "2025-01-15T10:00:00Z",
-  },
-  {
-    taskId: "01JGAB34DEF5432109876XYZ",
-    title: "New Member Outreach",
-    locationName: "Bangalore Center",
-    status: "OPEN",
-    allowedActions: { call: true, message: false },
-    totalTargets: 56,
-    assignedCount: 0,
-    createdAt: "2025-01-20T14:30:00Z",
-  },
-  {
-    taskId: "01JGAB56GHI2109876543DEF",
-    title: "Event Invitations - Republic Day",
-    locationName: "Bangalore Center",
-    status: "IN_PROGRESS",
-    allowedActions: { call: false, message: true },
-    totalTargets: 200,
-    assignedCount: 145,
-    createdAt: "2025-01-10T09:00:00Z",
-  },
-  {
-    taskId: "01JGAB78JKL9876543210GHI",
-    title: "Lead Follow-up Campaign",
-    locationName: "Bangalore Center",
-    status: "COMPLETED",
-    allowedActions: { call: true, message: true },
-    totalTargets: 75,
-    assignedCount: 75,
-    createdAt: "2025-01-05T11:00:00Z",
-  },
-];
+import { fetchTasksByLocation } from "~/server/actions/task-outreach";
+import type { OutreachTaskListItem } from "~/lib/schemas/ui/task.schema";
 
 export default function TasksList() {
   const [isAuthenticated, setIsAuthenticated] = createSignal(false);
   const [loading, setLoading] = createSignal(true);
+  const [searchParams] = useSearchParams<{ locationId?: string }>();
   const navigate = useNavigate();
+
+  // Get tasks for the location
+  const [tasks] = createResource(
+    () => searchParams.locationId,
+    async (locationId) => {
+      if (!locationId) return [];
+      return await fetchTasksByLocation(locationId);
+    }
+  );
 
   // Simple auth check
   onMount(async () => {
@@ -125,18 +77,55 @@ export default function TasksList() {
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold text-gray-900">Tasks</h1>
-          <A href="/tasks/new">
-            <Button variant="default">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              New Task
-            </Button>
-          </A>
+          <Show when={searchParams.locationId}>
+            <A href={`/tasks/new?locationId=${searchParams.locationId}`}>
+              <Button variant="default">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Task
+              </Button>
+            </A>
+          </Show>
         </div>
 
+        <Show when={!searchParams.locationId}>
+          <Card class="border-yellow-200 bg-yellow-50">
+            <CardContent class="pt-6">
+              <p class="text-yellow-800">
+                Please select a location to view tasks. Add <code>?locationId=YOUR_LOCATION_ID</code> to the URL.
+              </p>
+            </CardContent>
+          </Card>
+        </Show>
+
+        <Show when={tasks.loading}>
+          <Card>
+            <CardContent class="py-12 text-center text-gray-500">
+              Loading tasks...
+            </CardContent>
+          </Card>
+        </Show>
+
+        <Show when={tasks.error}>
+          <Card class="border-red-200 bg-red-50">
+            <CardContent class="pt-6">
+              <p class="text-red-800">Failed to load tasks: {String(tasks.error)}</p>
+            </CardContent>
+          </Card>
+        </Show>
+
+        <Show when={tasks() && tasks()!.length === 0 && searchParams.locationId}>
+          <Card>
+            <CardContent class="py-12 text-center text-gray-500">
+              <p class="text-lg font-medium">No tasks found</p>
+              <p class="text-sm mt-2">Create your first task to get started</p>
+            </CardContent>
+          </Card>
+        </Show>
+
         <div class="space-y-4">
-          <For each={DUMMY_TASKS}>
+          <For each={tasks()}>
             {(task) => (
               <Card>
                 <CardHeader>

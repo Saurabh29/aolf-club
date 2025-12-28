@@ -7,25 +7,21 @@
 import { useNavigate } from "@solidjs/router";
 import { TaskForm } from "~/components/TaskForm";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
+import { createTask } from "~/server/actions/task-outreach";
 
 export default function NewTask() {
   const navigate = useNavigate();
 
   const handleSave = async (request: SaveTaskRequest) => {
-    console.log("Saving new task:", request);
-    
-    // Backend integration pending
-    alert(
-      `Task created:\n\n` +
-        `Title: ${request.definition.title}\n` +
-        `Location: ${request.definition.locationId}\n` +
-        `Targets: ${request.targetUserIds.length}\n` +
-        `Assignments: ${request.assignments?.length ?? 0}\n\n` +
-        `Backend integration pending.`
-    );
-
-    // Navigate to tasks list
-    navigate("/tasks");
+    try {
+      const taskId = await createTask(request);
+      
+      // Navigate to the created task detail page
+      navigate(`/tasks/${taskId}`);
+    } catch (error: any) {
+      console.error("Failed to create task:", error);
+      alert(`Failed to create task: ${error.message || "Unknown error"}`);
+    }
   };
 
   const handleCancel = () => {

@@ -67,6 +67,10 @@ export default function TaskStep3(props: TaskStep3Props) {
   );
   const [selectedRows, setSelectedRows] = createSignal<Set<string>>(new Set());
   const [bulkAssigneeId, setBulkAssigneeId] = createSignal<string | null>(null);
+  
+  // Sorting state: "status" (default), "name", "phone", "type"
+  const [sortBy, setSortBy] = createSignal<"status" | "name" | "phone" | "type">("status");
+  const [sortDirection, setSortDirection] = createSignal<"asc" | "desc">("asc");
 
   // Combine all assignees (teachers + volunteers) with "Unassigned" option
   const allAssignees = createMemo(() => {
@@ -89,6 +93,45 @@ export default function TaskStep3(props: TaskStep3Props) {
     
     return options;
   });
+
+  // Sorted targets based on current sort settings
+  const sortedTargets = createMemo(() => {
+    const targets = [...props.targets];
+    const assignmentsMap = assignments();
+    const dir = sortDirection();
+    
+    targets.sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy() === "status") {
+        // Unassigned first
+        const aAssigned = !!assignmentsMap[a.id];
+        const bAssigned = !!assignmentsMap[b.id];
+        if (!aAssigned && bAssigned) comparison = -1;
+        else if (aAssigned && !bAssigned) comparison = 1;
+        else comparison = a.name.localeCompare(b.name);
+      } else if (sortBy() === "name") {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortBy() === "phone") {
+        comparison = (a.phone || "").localeCompare(b.phone || "");
+      } else if (sortBy() === "type") {
+        comparison = a.type.localeCompare(b.type);
+      }
+      
+      return dir === "asc" ? comparison : -comparison;
+    });
+    
+    return targets;
+  });
+
+  const toggleSort = (column: "status" | "name" | "phone" | "type") => {
+    if (sortBy() === column) {
+      setSortDirection(sortDirection() === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  };
 
   // Statistics
   const assignedCount = createMemo(() => {
@@ -273,14 +316,54 @@ export default function TaskStep3(props: TaskStep3Props) {
                     class="cursor-pointer"
                   />
                 </TableHead>
-                <TableHead>Target Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead class="w-64">Assigned To</TableHead>
+                <TableHead 
+                  class="cursor-pointer hover:bg-gray-50" 
+                  onClick={() => toggleSort("name")}
+                >
+                  <div class="flex items-center gap-1">
+                    Target Name
+                    {sortBy() === "name" && (
+                      <span class="text-xs">{sortDirection() === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  class="cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleSort("phone")}
+                >
+                  <div class="flex items-center gap-1">
+                    Phone
+                    {sortBy() === "phone" && (
+                      <span class="text-xs">{sortDirection() === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  class="cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleSort("type")}
+                >
+                  <div class="flex items-center gap-1">
+                    Type
+                    {sortBy() === "type" && (
+                      <span class="text-xs">{sortDirection() === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  class="w-64 cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleSort("status")}
+                >
+                  <div class="flex items-center gap-1">
+                    Assigned To
+                    {sortBy() === "status" && (
+                      <span class="text-xs">{sortDirection() === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <For each={props.targets}>
+              <For each={sortedTargets()}>
                 {(target) => (
                   <TableRow>
                     <TableCell>

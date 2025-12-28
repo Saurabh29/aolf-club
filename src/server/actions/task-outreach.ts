@@ -17,6 +17,7 @@ import type {
   SelfAssignResult,
   SaveInteractionRequest,
 } from "~/lib/schemas/ui/task.schema";
+import type { SaveTaskRequest } from "~/lib/schemas/ui";
 import * as taskRepo from "~/server/db/repositories/task-outreach.repository";
 
 /**
@@ -30,6 +31,33 @@ async function getCurrentUserId(): Promise<string> {
   // 2. Look up user by email from DynamoDB
   // 3. Return the userId
   return "01JJBK6XQZTEST1234567890"; // Test ULID
+}
+
+/**
+ * Fetch all tasks assigned to the current user
+ */
+export async function fetchMyTasks(): Promise<OutreachTaskListItem[]> {
+  try {
+    const userId = await getCurrentUserId();
+    // Query USER#userId + SK begins_with TASKASSIGNMENT#
+    // Then join with TASK items to get full details
+    return await taskRepo.getTasksAssignedToUser(userId);
+  } catch (error) {
+    console.error("[fetchMyTasks] Error:", error);
+    throw new Error("Failed to fetch your tasks");
+  }
+}
+
+/**
+ * Fetch task details by taskId (alias for fetchTask)
+ */
+export async function fetchTaskById(taskId: string): Promise<OutreachTask | null> {
+  try {
+    return await taskRepo.getTaskById(taskId);
+  } catch (error) {
+    console.error("[fetchTaskById] Error:", error);
+    throw new Error("Failed to fetch task details");
+  }
 }
 
 /**
@@ -125,5 +153,23 @@ export async function skipUser(taskId: string, targetUserId: string): Promise<vo
   } catch (error) {
     console.error("[skipUser] Error:", error);
     throw new Error("Failed to skip user");
+  }
+}
+
+/**
+ * Create a new outreach task
+ */
+export async function createTask(request: SaveTaskRequest): Promise<string> {
+  try {
+    const userId = await getCurrentUserId();
+    return await taskRepo.createTask(
+      userId,
+      request.definition,
+      request.targetUserIds,
+      request.assignments
+    );
+  } catch (error) {
+    console.error("[createTask] Error:", error);
+    throw new Error("Failed to create task");
   }
 }
