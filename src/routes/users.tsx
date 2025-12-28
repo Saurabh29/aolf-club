@@ -2,87 +2,35 @@
  * User Management Page
  * 
  * Table-based user list with multi-select and bulk actions.
- * Replaces card-based list.
+ * Integrated with real DynamoDB data (no dummy data).
  */
 
-import { Show, createSignal, onMount } from "solid-js";
+import { Show, createSignal, createResource } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { UserTable } from "~/components/UserTable";
 import { Button } from "~/components/ui/button";
-import type { UserListViewModel } from "~/lib/schemas/ui";
-
-// Dummy user data
-const DUMMY_USERS: UserListViewModel[] = [
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA1",
-    displayName: "Rajesh Kumar",
-    userType: "MEMBER",
-    isAdmin: false,
-    email: "rajesh@example.com",
-    phone: "+91 98765 43210",
-    createdAt: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA2",
-    displayName: "Priya Sharma",
-    userType: "LEAD",
-    isAdmin: true,
-    email: "priya@example.com",
-    createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA3",
-    displayName: "Amit Patel",
-    userType: "MEMBER",
-    isAdmin: false,
-    phone: "+91 98765 43212",
-    createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA4",
-    displayName: "Sunita Reddy",
-    userType: "MEMBER",
-    isAdmin: false,
-    email: "sunita@example.com",
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA5",
-    displayName: "Vikram Singh",
-    userType: "MEMBER",
-    isAdmin: false,
-    email: "vikram@example.com",
-    phone: "+91 98765 43214",
-    createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4XNPQA6",
-    displayName: "Kavita Desai",
-    userType: "LEAD",
-    isAdmin: true,
-    email: "kavita@example.com",
-    createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+import { AddUserDialog } from "~/components/AddUserDialog";
+import { ImportUsersDialog } from "~/components/ImportUsersDialog";
+import { getUsersForActiveLocation, type UserWithGroup } from "~/server/actions/users";
 
 export default function UserManagement() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
   const navigate = useNavigate();
+  
+  // Dialog state
+  const [showAddUser, setShowAddUser] = createSignal(false);
+  const [showImportUsers, setShowImportUsers] = createSignal(false);
 
-  // Session check disabled for preview
-  onMount(() => {
-    setIsAuthenticated(false);
-    setLoading(false);
+  // Fetch users for active location (no dummy data)
+  const [usersResource, { refetch }] = createResource(async () => {
+    const result = await getUsersForActiveLocation();
+    if (!result.success) {
+      console.error("Failed to load users:", result.error);
+      return [];
+    }
+    return result.data;
   });
 
-  const handleBulkAssignToGroup = (users: UserListViewModel[]) => {
+  const handleBulkAssignToGroup = (users: UserWithGroup[]) => {
     alert(
       `Assign ${users.length} user(s) to group:\n` +
         users.map((u) => `- ${u.displayName}`).join("\n") +
@@ -95,25 +43,52 @@ export default function UserManagement() {
   };
 
   return (
-    <Show when={!loading()}>
-      <div class="container mx-auto p-4 md:p-6 max-w-7xl">
-        <div class="mb-6 flex items-center justify-between">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
-            <p class="text-gray-600 mt-2">
-              Manage volunteers, teachers, members, and administrators
-            </p>
-          </div>
-          <Button variant="default" onClick={() => alert("Add new user - Backend pending")}>
+    <div class="container mx-auto p-4 md:p-6 max-w-7xl">
+      <AddUserDialog
+        open={showAddUser()}
+        onOpenChange={setShowAddUser}
+        onUserCreated={() => refetch()}
+      />
+      
+      <ImportUsersDialog
+        open={showImportUsers()}
+        onOpenChange={setShowImportUsers}
+        onUsersImported={() => refetch()}
+      />
+      
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+          <p class="text-gray-600 mt-2">
+            Manage volunteers, teachers, members, and administrators
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImportUsers(true)}>
+            Import Users
+          </Button>
+          <Button variant="default" onClick={() => setShowAddUser(true)}>
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Add User
           </Button>
         </div>
+      </div>
 
+      <Show when={usersResource.loading}>
+        <div class="text-center py-8 text-gray-500">Loading users...</div>
+      </Show>
+
+      <Show when={usersResource.error}>
+        <div class="text-center py-8 text-red-600">
+          Error loading users: {String(usersResource.error)}
+        </div>
+      </Show>
+
+      <Show when={!usersResource.loading && usersResource()}>
         <UserTable
-          users={DUMMY_USERS}
+          users={usersResource() || []}
           onSelectionChange={handleSelectionChange}
           bulkActions={[
             {
@@ -133,11 +108,7 @@ export default function UserManagement() {
             },
           ]}
         />
-
-        <div class="mt-4 text-sm text-gray-500">
-          Note: This is dummy data. Backend integration will load real users from DynamoDB.
-        </div>
-      </div>
-    </Show>
+      </Show>
+    </div>
   );
 }

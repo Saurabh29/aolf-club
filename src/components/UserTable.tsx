@@ -22,16 +22,16 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import type { UserListViewModel } from "~/lib/schemas/ui";
+import type { UserWithGroup } from "~/server/actions/users";
 
 export interface UserTableProps {
-  users: UserListViewModel[];
+  users: UserWithGroup[];
   onSelectionChange?: (selectedUserIds: string[]) => void;
   bulkActions?: Array<{
     label: string;
     icon?: any;
     variant?: "default" | "outline" | "secondary" | "destructive";
-    onClick: (selectedUsers: UserListViewModel[]) => void;
+    onClick: (selectedUsers: UserWithGroup[]) => void;
   }>;
 }
 
@@ -182,9 +182,16 @@ export const UserTable: Component<UserTableProps> = (props) => {
                     </TableCell>
                     <TableCell>
                       <div class="flex flex-wrap gap-1">
-                        <Badge variant={user.isAdmin ? "default" : "secondary"}>
-                          {user.isAdmin ? "ADMIN" : "VOLUNTEER"}
-                        </Badge>
+                        <Show when={user.isAdmin}>
+                          <Badge variant="default">ADMIN</Badge>
+                        </Show>
+                        <For each={user.groups} fallback={<Badge variant="secondary">NO GROUPS</Badge>}>
+                          {(group) => (
+                            <Badge variant="outline">
+                              {group.groupName || group.groupType}
+                            </Badge>
+                          )}
+                        </For>
                         <Badge variant="outline">{user.userType}</Badge>
                       </div>
                     </TableCell>
