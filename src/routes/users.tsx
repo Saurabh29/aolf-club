@@ -11,6 +11,8 @@ import { UserTable } from "~/components/UserTable";
 import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { createMemo } from "solid-js";
 import { getUsersForActiveLocation, type UserWithGroup } from "~/server/actions/users";
 
 export default function UserManagement() {
@@ -41,6 +43,9 @@ export default function UserManagement() {
   const handleSelectionChange = (selectedIds: string[]) => {
     console.log("Selected user IDs:", selectedIds);
   };
+
+  const leads = createMemo(() => (usersResource() || []).filter((u) => u.userType === "LEAD"));
+  const members = createMemo(() => (usersResource() || []).filter((u) => u.userType === "MEMBER"));
 
   return (
     <div class="container mx-auto p-4 md:p-6 max-w-7xl">
@@ -87,27 +92,20 @@ export default function UserManagement() {
       </Show>
 
       <Show when={!usersResource.loading && usersResource()}>
-        <UserTable
-          users={usersResource() || []}
-          onSelectionChange={handleSelectionChange}
-          bulkActions={[
-            {
-              label: "Assign to Group",
-              variant: "default",
-              onClick: handleBulkAssignToGroup,
-              icon: (
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              ),
-            },
-          ]}
-        />
+        <Tabs defaultValue="members">
+          <TabsList>
+            <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="members">
+            <UserTable users={members()} onSelectionChange={handleSelectionChange} bulkActions={[{ label: "Assign to Group", variant: "default", onClick: handleBulkAssignToGroup }]} />
+          </TabsContent>
+
+          <TabsContent value="leads">
+            <UserTable users={leads()} onSelectionChange={handleSelectionChange} bulkActions={[{ label: "Assign to Group", variant: "default", onClick: handleBulkAssignToGroup }]} />
+          </TabsContent>
+        </Tabs>
       </Show>
     </div>
   );
