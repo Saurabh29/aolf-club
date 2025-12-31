@@ -81,18 +81,6 @@ export const authConfig: StartAuthJSConfig = {
                     if (uniq.length === 1) {
                         // Only override persisted preference when user belongs to exactly one location
                         (session as any).user.activeLocationId = uniq[0];
-                        // Also ensure an HttpOnly cookie is set for downstream server actions
-                        // Note: StartAuthJS `session` callback can return headers via special
-                        // shape when running inside its handler. Attach `Set-Cookie` header
-                        // to the returned session by including a `_setCookie` property
-                        // on the session object. The StartAuthJS handler will include
-                        // it in the response if supported.
-                        try {
-                            const cookie = `aolf_active_location=${uniq[0]}; Path=/; HttpOnly; SameSite=Lax`;
-                            (session as any)._setCookie = cookie;
-                        } catch (e) {
-                            // ignore header attaching failures
-                        }
                     }
                 } catch (e) {
                     // ignore errors here

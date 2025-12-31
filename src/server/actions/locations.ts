@@ -293,15 +293,11 @@ export async function getUserLocations(): Promise<ActionResult<{ locations: Arra
       if (loc) locations.push({ id: loc.locationId, name: loc.name });
     }
 
-    // Read activeLocationId from cookie if present
+    // Fetch activeLocationId from user record in DB
     let activeLocationId: string | undefined = undefined;
     try {
-      const ev = getRequestEvent?.();
-      if (ev) {
-        const cookieHeader = ev.request.headers.get("cookie") || "";
-        const match = cookieHeader.match(/(?:^|; )aolf_active_location=([^;]+)/);
-        if (match) activeLocationId = decodeURIComponent(match[1]);
-      }
+      const user = await import("~/server/db/repositories/user.repository").then((m) => m.getUserById(userId));
+      if (user?.activeLocationId) activeLocationId = user.activeLocationId;
     } catch (e) {
       // ignore
     }
