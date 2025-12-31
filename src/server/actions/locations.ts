@@ -50,18 +50,10 @@ export type ActionResult<T> =
  * maps locationId to id for UI convention.
  */
 function toUiLocation(dbLocation: Location): LocationUi {
+  // Spread all DB fields, but add id (for UI) and ensure locationId is present (for type compatibility)
   return {
+    ...dbLocation,
     id: dbLocation.locationId,
-    locationCode: dbLocation.locationCode,
-    name: dbLocation.name,
-    placeId: dbLocation.placeId,
-    formattedAddress: dbLocation.formattedAddress,
-    addressComponents: dbLocation.addressComponents,
-    lat: dbLocation.lat,
-    lng: dbLocation.lng,
-    status: dbLocation.status,
-    createdAt: dbLocation.createdAt,
-    updatedAt: dbLocation.updatedAt,
   };
 }
 

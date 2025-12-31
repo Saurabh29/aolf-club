@@ -58,61 +58,24 @@ export const AddLocationFormSchema = LocationDbSchema.omit({
 
 export type AddLocationForm = z.infer<typeof AddLocationFormSchema>;
 
+
 /**
  * LocationUiSchema - Schema for displaying locations in the UI.
- * 
- * Derived from DB schema by omitting internal DynamoDB fields.
- * Maps locationId to id for UI convention.
+ * Derived from DB schema by omitting internal DynamoDB fields and mapping locationId to id.
  */
-const LocationUiBaseSchema = LocationDbSchema.omit({
+export const LocationUiSchema = LocationDbSchema.omit({
   PK: true,
   SK: true,
   itemType: true,
-});
-
-type LocationUiBase = z.infer<typeof LocationUiBaseSchema>;
-
-export const LocationUiSchema = LocationUiBaseSchema.transform((loc: LocationUiBase) => ({
-  // Map locationId to id for UI convention
+}).transform((loc) => ({
   id: loc.locationId,
-  locationCode: loc.locationCode,
-  name: loc.name,
-  placeId: loc.placeId,
-  formattedAddress: loc.formattedAddress,
-  addressComponents: loc.addressComponents,
-  lat: loc.lat,
-  lng: loc.lng,
-  status: loc.status,
-  createdAt: loc.createdAt,
-  updatedAt: loc.updatedAt,
+  ...loc,
 }));
 
 /**
- * LocationUi - UI-facing type for Location.
- * Note: Using explicit type instead of z.infer due to transform.
+ * LocationUi - UI-facing type for Location, inferred from LocationUiSchema.
  */
-export type LocationUi = {
-  id: string;
-  locationCode: string;
-  name: string;
-  placeId?: string;
-  formattedAddress?: string;
-  addressComponents?: {
-    streetNumber?: string;
-    route?: string;
-    city?: string;
-    state?: string;
-    stateCode?: string;
-    postalCode?: string;
-    country?: string;
-    countryCode?: string;
-  };
-  lat?: number;
-  lng?: number;
-  status: "active" | "inactive";
-  createdAt: string;
-  updatedAt: string;
-};
+export type LocationUi = z.infer<typeof LocationUiSchema>;
 
 /**
  * EditLocationFormSchema - Schema for editing existing locations.
