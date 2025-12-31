@@ -130,6 +130,20 @@ export async function createLocation(
         // If auth not available or addition fails, log and continue
         console.warn("Failed to add creator to admin group:", e);
       }
+      // If the creator does not yet have an activeLocationId, set this newly created location as their active location.
+      try {
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const userRepo = await import("~/server/db/repositories/user.repository");
+          const existing = await userRepo.getUserById(userId);
+          if (existing && !existing.activeLocationId) {
+            await userRepo.updateUser(userId, { activeLocationId: dbLocation.locationId });
+          }
+        }
+      } catch (e) {
+        // non-fatal: if we can't persist the activeLocationId, continue
+        console.warn("Failed to persist activeLocationId for creator:", e);
+      }
     } catch (err) {
       console.error("Failed to create default groups/roles for location:", err);
     }

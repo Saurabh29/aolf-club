@@ -62,29 +62,26 @@ export const authConfig: StartAuthJSConfig = {
                 if (dbUser) token.userId = dbUser.userId;
             }
 
-            return token;
-        },
-        session: async ({ session, token }) => {
-            // Add user info to session from token
+            // If we have userId, fetch user and groups for activeLocationId
             if (token.userId) {
-                (session as any).user.id = token.userId;
                 try {
-                    // Populate activeLocationId from persisted user preference if set
                     const u = await getUserById(token.userId as string);
                     if (u?.activeLocationId) {
-                        (session as any).user.activeLocationId = u.activeLocationId;
-                    }
-
-                    // If user only belongs to one location, set it on session for convenience
-                    const groups = await getUserGroupsForUser(token.userId as string);
-                    const uniq = Array.from(new Set(groups.map((g) => g.locationId)));
-                    if (uniq.length === 1) {
-                        // Only override persisted preference when user belongs to exactly one location
-                        (session as any).user.activeLocationId = uniq[0];
+                        token.activeLocationId = u.activeLocationId;
                     }
                 } catch (e) {
                     // ignore errors here
                 }
+            }
+            return token;
+        },
+        session: async ({ session, token }) => {
+            // Add user info to session from token only (no DB calls)
+            if (token.userId) {
+                (session as any).user.id = token.userId;
+            }
+            if (token.activeLocationId) {
+                (session as any).user.activeLocationId = token.activeLocationId;
             }
             return session;
         },
