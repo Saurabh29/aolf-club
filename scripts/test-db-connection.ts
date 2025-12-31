@@ -7,7 +7,7 @@
 
 import { ListTablesCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { config } from "dotenv";
-import { env } from "~/server/config/env";
+import { env } from "~/server/config";
 
 // Load environment variables from files if present
 config();

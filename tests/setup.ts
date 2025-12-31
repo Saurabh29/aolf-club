@@ -6,7 +6,7 @@
  */
 
 import { config } from "dotenv";
-import { env } from "~/server/config/env";
+import { env } from "~/server/config";
 
 // Load test environment variables from files if present
 config({ path: ".env.test" });

@@ -3,7 +3,7 @@ import type { StartAuthJSConfig } from "start-authjs";
 import { StartAuthJS } from "start-authjs";
 import type { AuthRequestContext } from "start-authjs";
 import { getRequestEvent } from "solid-js/web";
-import { env } from "../config/env";
+import { env } from "../config";
 import { createOrGetOAuthUser, findUserByEmail } from "../services/auth.service";
 import { getUserGroupsForUser } from "~/server/db/repositories/userGroup.repository";
 import { getUserById } from "~/server/db/repositories/user.repository";

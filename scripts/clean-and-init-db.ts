@@ -30,7 +30,7 @@ import {
 dotenv.config();
 
 (async () => {
-  const { env } = await import("~/server/config/env");
+  const { env } = await import("~/server/config");
 
   const TABLE_NAME = env.DYNAMODB_TABLE_NAME ?? "aolfclub-entities";
   const AWS_REGION = env.AWS_REGION ?? "us-east-1";
