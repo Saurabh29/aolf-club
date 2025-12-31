@@ -1,7 +1,7 @@
-import { Component, For, Show, JSX, createMemo, createSignal, onMount } from "solid-js"
+import { For, Show, JSX, createMemo, createSignal, onMount } from "solid-js"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "~/components/ui/Card"
 import { Button } from "~/components/ui/button"
-import type { GenericCardListProps, CardAction, GridConfig } from "~/lib/schemas/ui/card.schema"
+import type { GenericCardListProps, GridConfig } from "~/lib/schemas/ui/card.schema"
 
 /**
  * GenericCardList - A reusable card list component
@@ -28,20 +28,6 @@ const DEFAULT_GRID: GridConfig = {
   lg: 3,
 }
 
-function getGridClasses(grid: GridConfig): string {
-  const classes = ["grid", "gap-4"]
-  
-  // Base (mobile) - always 1 column
-  classes.push("grid-cols-1")
-  
-  // Responsive breakpoints
-  if (grid.sm && grid.sm > 1) classes.push(`sm:grid-cols-${grid.sm}`)
-  if (grid.md) classes.push(`md:grid-cols-${grid.md}`)
-  if (grid.lg) classes.push(`lg:grid-cols-${grid.lg}`)
-  if (grid.xl) classes.push(`xl:grid-cols-${grid.xl}`)
-  
-  return classes.join(" ")
-}
 
 export function GenericCardList<T extends { id: string }>(
   props: GenericCardListProps<T>
@@ -56,12 +42,6 @@ export function GenericCardList<T extends { id: string }>(
   const gridClasses = createMemo(() => {
     const g = gridConfig()
     // Use explicit classes for Tailwind JIT
-    const cols = {
-      1: "grid-cols-1",
-      2: "grid-cols-2", 
-      3: "grid-cols-3",
-      4: "grid-cols-4",
-    }
     const mdCols = {
       1: "md:grid-cols-1",
       2: "md:grid-cols-2",

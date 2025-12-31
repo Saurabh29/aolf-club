@@ -115,7 +115,7 @@ export const AddUserDialog: Component<AddUserDialogProps> = (props) => {
           </div>
 
           <div class="flex items-center space-x-2">
-            <input
+            <Input
               id="isAdmin"
               type="checkbox"
               checked={isAdmin()}
