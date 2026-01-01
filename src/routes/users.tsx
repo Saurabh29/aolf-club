@@ -13,7 +13,8 @@ import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { createMemo } from "solid-js";
-import { getUsersForActiveLocation, type UserWithGroup } from "~/server/actions/users";
+import { getUsersForActiveLocation, assignUsersToGroup, type UserWithGroup } from "~/server/actions/users";
+import type { GroupType } from "~/lib/schemas/db/types";
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -32,12 +33,26 @@ export default function UserManagement() {
     return result.data;
   });
 
-  const handleBulkAssignToGroup = (users: UserWithGroup[]) => {
-    alert(
-      `Assign ${users.length} user(s) to group:\n` +
-        users.map((u) => `- ${u.displayName}`).join("\n") +
-        "\n\nBackend integration pending."
-    );
+  const handleAssignToGroup = async (users: UserWithGroup[], groupType: GroupType) => {
+    const userIds = users.map((u) => u.userId);
+    const result = await assignUsersToGroup(userIds, groupType);
+    
+    if (result.success) {
+      const { assigned, failed, errors } = result.data;
+      if (failed === 0) {
+        alert(`Successfully assigned ${assigned} user(s) to ${groupType} group.`);
+      } else {
+        alert(
+          `Assigned ${assigned} user(s) to ${groupType} group.\n` +
+          `Failed: ${failed}\n\n` +
+          errors.slice(0, 5).join("\n") +
+          (errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : "")
+        );
+      }
+      refetch();
+    } else {
+      alert(`Failed to assign users: ${result.error}`);
+    }
   };
 
   const handleSelectionChange = (selectedIds: string[]) => {
@@ -99,11 +114,11 @@ export default function UserManagement() {
           </TabsList>
 
           <TabsContent value="members">
-            <UserTable users={members()} onSelectionChange={handleSelectionChange} bulkActions={[{ label: "Assign to Group", variant: "default", onClick: handleBulkAssignToGroup }]} />
+            <UserTable users={members()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
           </TabsContent>
 
           <TabsContent value="leads">
-            <UserTable users={leads()} onSelectionChange={handleSelectionChange} bulkActions={[{ label: "Assign to Group", variant: "default", onClick: handleBulkAssignToGroup }]} />
+            <UserTable users={leads()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
           </TabsContent>
         </Tabs>
       </Show>

@@ -11,6 +11,7 @@ import { getCurrentUserId } from "./auth";
 import { getUserById, createUser, updateUser } from "~/server/db/repositories/user.repository";
 import { getUsersForLocation, addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/userGroup.repository";
+import { getUserGroupById } from "~/server/db/repositories/userGroup.repository";
 import { createEmailIdentity } from "~/server/db/repositories/email.repository";
 import type { GroupType } from "~/lib/schemas/db/types";
 
@@ -306,6 +307,83 @@ export async function importUsersFromCSV(input: ImportUsersInput): Promise<Actio
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to import users"
+    };
+  }
+}
+
+/**
+ * Assign multiple users to a group by group type (Admin, Teacher, Volunteer).
+ * 
+ * @param userIds - Array of user IDs to assign
+ * @param groupType - Group type: "ADMIN", "TEACHER", or "VOLUNTEER"
+ * @returns ActionResult with count of successful assignments
+ */
+export async function assignUsersToGroup(
+  userIds: string[],
+  groupType: GroupType
+): Promise<ActionResult<{ assigned: number; failed: number; errors: string[] }>> {
+  "use server";
+
+  try {
+    // Get current user's active location
+    const currentUserId = await getCurrentUserId();
+    const currentUser = await getUserById(currentUserId);
+
+    if (!currentUser || !currentUser.activeLocationId) {
+      return {
+        success: false,
+        error: "No active location selected. Please select a location first."
+      };
+    }
+
+    const locationId = currentUser.activeLocationId;
+
+    // Import repository to find groups by location and type
+    const { getGroupsForLocation } = await import("~/server/db/repositories/userGroup.repository");
+
+    // Query for groups with the specified type for this location
+    const groups = await getGroupsForLocation(locationId, groupType);
+
+    if (!groups || groups.length === 0) {
+      return {
+        success: false,
+        error: `No ${groupType} group found for this location. Please create groups first.`,
+      };
+    }
+
+    const targetGroup = groups[0];
+    const groupId = targetGroup.groupId;
+
+    let assigned = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const userId of userIds) {
+      try {
+        // Add user to group
+        await addUserToGroup(userId, groupId, {
+          locationId,
+          groupType,
+          groupName: targetGroup.name,
+        });
+        assigned++;
+      } catch (error) {
+        failed++;
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        errors.push(`User ${userId}: ${errorMsg}`);
+        console.error(`[assignUsersToGroup] Failed for user ${userId}:`, error);
+      }
+    }
+
+    return {
+      success: true,
+      data: { assigned, failed, errors },
+    };
+  } catch (error) {
+    console.error("[assignUsersToGroup] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to assign users to group"
     };
   }
 }

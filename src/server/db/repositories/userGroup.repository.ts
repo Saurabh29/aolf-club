@@ -42,12 +42,36 @@ export async function createUserGroup(input: CreateUserGroupInput): Promise<User
 
   const validated = UserGroupSchema.parse(group);
 
+  // Create the location→group edge item
+  const locationGroupEdge = {
+    PK: Keys.locationPK(input.locationId),
+    SK: Keys.groupSK(groupId),
+    groupId,
+    locationId: input.locationId,
+    groupType: input.groupType,
+    name: input.name,
+    createdAt: timestamp,
+  };
+
   try {
+    // Atomically create both the group and the location→group edge
     await docClient.send(
-      new PutCommand({
-        TableName: TABLE_NAME,
-        Item: validated,
-        ConditionExpression: "attribute_not_exists(PK)",
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: TABLE_NAME,
+              Item: validated,
+              ConditionExpression: "attribute_not_exists(PK)",
+            },
+          },
+          {
+            Put: {
+              TableName: TABLE_NAME,
+              Item: locationGroupEdge,
+            },
+          },
+        ],
       })
     );
 
@@ -87,6 +111,53 @@ export async function getUserGroupById(groupId: string): Promise<UserGroup | nul
     console.error("[getUserGroupById] Failed:", error);
     throw new Error(
       `Failed to get user group: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}
+
+/**
+ * Get all groups for a location using LOCATION→GROUP edges.
+ * 
+ * @param locationId - ULID of the location
+ * @param groupType - Optional filter by group type
+ * @returns Array of group edge items with group metadata
+ */
+export async function getGroupsForLocation(
+  locationId: string,
+  groupType?: GroupType
+): Promise<Array<{ groupId: string; groupType: GroupType; name: string }>> {
+  try {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": Keys.locationPK(locationId),
+          ":skPrefix": Keys.GROUP_PREFIX,
+        },
+      })
+    );
+
+    if (!result.Items || result.Items.length === 0) {
+      return [];
+    }
+
+    // Filter by groupType if provided
+    const groups = result.Items.map((item) => ({
+      groupId: item.groupId as string,
+      groupType: item.groupType as GroupType,
+      name: item.name as string,
+    }));
+
+    if (groupType) {
+      return groups.filter((g) => g.groupType === groupType);
+    }
+
+    return groups;
+  } catch (error) {
+    console.error("[getGroupsForLocation] Failed:", error);
+    throw new Error(
+      `Failed to get groups for location: ${error instanceof Error ? error.message : "Unknown error"}`
     );
   }
 }

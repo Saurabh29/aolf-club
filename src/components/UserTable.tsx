@@ -22,6 +22,12 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "~/components/ui/dropdown-menu";
 import type { UserWithGroup } from "~/server/actions/users";
 
 export interface UserTableProps {
@@ -33,6 +39,7 @@ export interface UserTableProps {
     variant?: "default" | "outline" | "secondary" | "destructive";
     onClick: (selectedUsers: UserWithGroup[]) => void;
   }>;
+  onAssignToGroup?: (selectedUsers: UserWithGroup[], groupType: "ADMIN" | "TEACHER" | "VOLUNTEER") => void;
 }
 
 export const UserTable: Component<UserTableProps> = (props) => {
@@ -97,6 +104,24 @@ export const UserTable: Component<UserTableProps> = (props) => {
             {selectedIds().size} user{selectedIds().size !== 1 ? "s" : ""} selected
           </span>
           <div class="flex gap-2 ml-auto">
+            <Show when={props.onAssignToGroup}>
+              <DropdownMenu>
+                <DropdownMenuTrigger as={Button<"button">} variant="default" size="sm">
+                  Assign to Group
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => props.onAssignToGroup?.(selectedUsers(), "ADMIN")}>
+                    Admin
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => props.onAssignToGroup?.(selectedUsers(), "TEACHER")}>
+                    Teacher
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => props.onAssignToGroup?.(selectedUsers(), "VOLUNTEER")}>
+                    Volunteer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Show>
             <For each={props.bulkActions}>
               {(action) => (
                 <Button
