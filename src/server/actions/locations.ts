@@ -16,11 +16,11 @@
 import {
   createLocation as createLocationRepo,
   getLocationById as getLocationByIdRepo,
-  listLocations as listLocationsRepo,
   softDeleteLocation as softDeleteLocationRepo,
   getLocationByCode as getLocationByCodeRepo,
   updateLocation as updateLocationRepo,
 } from "~/server/db/repositories/location.repository";
+import { getLocationsForUser } from "~/server/db/repositories/userLocation.repository";
 import { getRequestEvent } from "solid-js/web";
 import { getUserGroupsForUser } from "~/server/db/repositories/userGroup.repository";
 import {
@@ -187,7 +187,10 @@ export async function createLocation(
 }
 
 /**
- * Retrieves all locations.
+ * Retrieves all locations for the current logged-in user.
+ * 
+ * Uses Query-based access pattern instead of Scan for efficiency.
+ * Only returns locations that the user is a member of.
  * 
  * @returns ActionResult with array of locations or error message
  */
@@ -195,13 +198,37 @@ export async function getLocations(): Promise<ActionResult<LocationUi[]>> {
   "use server";
 
   try {
-    const dbLocations = await listLocationsRepo();
-    const uiLocations = dbLocations.map(toUiLocation);
-    // Return only active locations (soft-deleted items have status='inactive')
-    const activeLocations = uiLocations.filter((l) => l.status === "active");
+    // Get current user ID
+    const userId = await getCurrentUserId();
+    
+    // Query for locations the user belongs to (efficient query, no scan)
+    const userLocations = await getLocationsForUser(userId);
+    
+    if (userLocations.length === 0) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+    
+    // Fetch full Location metadata for each location
+    const dbLocations = await Promise.all(
+      userLocations.map(async (edge) => {
+        const location = await getLocationByIdRepo(edge.locationId);
+        return location;
+      })
+    );
+    
+    // Filter out null values (locations that don't exist) and inactive locations
+    const validLocations = dbLocations.filter(
+      (loc): loc is Location => loc !== null && loc.status === "active"
+    );
+    
+    const uiLocations = validLocations.map(toUiLocation);
+    
     return {
       success: true,
-      data: activeLocations,
+      data: uiLocations,
     };
   } catch (error) {
     console.error("[getLocations] Server action failed:", error);
