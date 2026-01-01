@@ -1,7 +1,7 @@
 import { getSession } from "start-authjs";
 import { getRequestEvent } from "solid-js/web";
 import type { StartAuthJSConfig } from "start-authjs";
-import { authConfig } from ".";
+import { authConfig } from "../auth"; 
 
 /**
  * Resolve the current authenticated application user ID from the incoming

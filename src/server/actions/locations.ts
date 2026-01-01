@@ -28,7 +28,7 @@ import {
   addUserToGroup,
 } from "~/server/db/repositories/userGroup.repository";
 import { assignRoleToGroup, createRole } from "~/server/db/repositories/permission.repository";
-import { getCurrentUserId } from "~/server/auth";
+import { getCurrentUserId } from "./auth"; 
 import {
   AddLocationFormSchema,
   type AddLocationForm,

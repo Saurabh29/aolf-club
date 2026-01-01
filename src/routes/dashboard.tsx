@@ -5,8 +5,7 @@
  * Mobile-first design with responsive grid layout.
  */
 
-import { Show, createSignal, onMount } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { Show } from "solid-js";
 import { GenericCardList } from "~/components/GenericCardList";
 import { GenericBreakdownCard, type BreakdownItem } from "~/components/GenericBreakdownCard";
 import type { TaskReportSummary } from "~/lib/schemas/ui";
@@ -80,32 +79,6 @@ const getSummaryStats = (summary: TaskReportSummary): SummaryStat[] => [
 ];
 
 export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
-  const navigate = useNavigate();
-
-  // Simple auth check - only verify if user is authenticated
-  onMount(async () => {
-    try {
-      const resp = await fetch("/api/auth/session");
-      if (!resp.ok) {
-        setIsAuthenticated(false);
-        navigate("/", { replace: true });
-        return;
-      }
-      const data = await resp.json();
-      setIsAuthenticated(!!data);
-      if (!data) {
-        navigate("/", { replace: true });
-      }
-    } catch (e) {
-      console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
-      navigate("/", { replace: true });
-    } finally {
-      setLoading(false);
-    }
-  });
 
   const summary = () => DUMMY_SUMMARY;
   const summaryStats = () => getSummaryStats(summary());
@@ -173,8 +146,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <Show when={!loading()}>
-      <div class="p-6 space-y-8">
+    <div class="p-6 space-y-8">
         <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
 
         {/* Summary Statistics using GenericCardList */}
@@ -213,6 +185,5 @@ export default function Dashboard() {
           gridCols="4"
         />
       </div>
-    </Show>
   );
 }

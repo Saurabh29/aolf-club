@@ -6,39 +6,8 @@
  * Phase 2B: Will implement lead cards and call history UI.
  */
 
-import { Show, createSignal, onMount } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-
 export default function LeadsCallHistory() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
-  const navigate = useNavigate();
-
-  // Simple auth check - only verify if user is authenticated
-  onMount(async () => {
-    try {
-      const resp = await fetch("/api/auth/session");
-      if (!resp.ok) {
-        setIsAuthenticated(false);
-        navigate("/test-oauth", { replace: true });
-        return;
-      }
-      const data = await resp.json();
-      setIsAuthenticated(!!data);
-      if (!data) {
-        navigate("/test-oauth", { replace: true });
-      }
-    } catch (e) {
-      console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
-      navigate("/test-oauth", { replace: true });
-    } finally {
-      setLoading(false);
-    }
-  });
-
   return (
-    <Show when={!loading() && isAuthenticated()}>
       <div class="container mx-auto p-4 md:p-6">
         <h1 class="text-3xl font-bold text-gray-900 mb-6">Leads Call History</h1>
         
@@ -47,6 +16,5 @@ export default function LeadsCallHistory() {
           <p>Lead cards with call history will appear here.</p>
         </div>
       </div>
-    </Show>
   );
 }

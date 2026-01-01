@@ -10,8 +10,8 @@
  * Phase 2B: Backend integration with real DynamoDB calls
  */
 
-import { Show, createSignal, onMount, For, createResource } from "solid-js";
-import { A, useNavigate, useParams, createAsync } from "@solidjs/router";
+import { Show, createSignal, For, createResource } from "solid-js";
+import { A, useParams, createAsync } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -35,10 +35,17 @@ import {
 // ========== Component ==========
 
 export default function TaskDetail() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [authLoading, setAuthLoading] = createSignal(true);
-  const navigate = useNavigate();
   const params = useParams();
+
+  // Format date for display
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   // Local state
   const [assignCount, setAssignCount] = createSignal(20);
@@ -78,37 +85,6 @@ export default function TaskDetail() {
       return await fetchUnassignedCount(taskId);
     }
   );
-
-  // Simple auth check
-  onMount(async () => {
-    try {
-      const resp = await fetch("/api/auth/session");
-      if (!resp.ok) {
-        setIsAuthenticated(false);
-        navigate("/", { replace: true });
-        return;
-      }
-      const data = await resp.json();
-      setIsAuthenticated(!!data);
-      if (!data) {
-        navigate("/", { replace: true });
-      }
-    } catch (e) {
-      console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
-      navigate("/", { replace: true });
-    } finally {
-      setAuthLoading(false);
-    }
-  });
-
-  const formatDate = (isoDate: string) => {
-    return new Date(isoDate).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -234,8 +210,7 @@ export default function TaskDetail() {
   };
 
   return (
-    <Show when={!authLoading()}>
-      <Show
+    <Show
         when={!task.loading && !assignedUsers.loading}
         fallback={
           <div class="p-6 flex items-center justify-center min-h-screen">
@@ -621,9 +596,8 @@ export default function TaskDetail() {
             </div>
           </Show>
         </div>
-          </div>
+      </div>
         </Show>
       </Show>
-    </Show>
   );
 }

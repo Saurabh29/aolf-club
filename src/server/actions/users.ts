@@ -7,7 +7,7 @@
  * All actions return { success: boolean, data?: T, error?: string }
  */
 
-import { getCurrentUserId } from "~/server/auth";
+import { getCurrentUserId } from "./auth"; 
 import { getUserById, createUser, updateUser } from "~/server/db/repositories/user.repository";
 import { getUsersForLocation, addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/userGroup.repository";

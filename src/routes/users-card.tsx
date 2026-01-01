@@ -5,8 +5,7 @@
  * No permissions logic - simple user display only.
  */
 
-import { Show, createSignal, onMount } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { Show } from "solid-js";
 import { GenericCardList } from "~/components/GenericCardList";
 import { Badge } from "~/components/ui/badge";
 import type { UserListViewModel } from "~/lib/schemas/ui";
@@ -70,32 +69,6 @@ const DUMMY_USERS: (UserListViewModel & { id: string })[] = [
 ];
 
 export default function UserManagement() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
-  const navigate = useNavigate();
-
-  // Simple auth check - only verify if user is authenticated
-  onMount(async () => {
-    try {
-      const resp = await fetch("/api/auth/session");
-      if (!resp.ok) {
-        setIsAuthenticated(false);
-        navigate("/", { replace: true });
-        return;
-      }
-      const data = await resp.json();
-      setIsAuthenticated(!!data);
-      if (!data) {
-        navigate("/", { replace: true });
-      }
-    } catch (e) {
-      console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
-      navigate("/", { replace: true });
-    } finally {
-      setLoading(false);
-    }
-  });
 
   // Format date for display
   const formatDate = (isoString: string) => {
@@ -108,7 +81,6 @@ export default function UserManagement() {
   };
 
   return (
-    <Show when={!loading() && isAuthenticated()}>
       <div class="container mx-auto p-4 md:p-6 max-w-7xl">
         <div class="mb-6">
           <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
@@ -175,6 +147,5 @@ export default function UserManagement() {
           emptyMessage="No users found"
         />
       </div>
-    </Show>
   );
 }

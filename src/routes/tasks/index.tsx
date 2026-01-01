@@ -5,8 +5,8 @@
  * Users can view and navigate to task details.
  */
 
-import { Show, createSignal, onMount, For, createResource } from "solid-js";
-import { A, useNavigate, useSearchParams } from "@solidjs/router";
+import { Show, For, createResource } from "solid-js";
+import { A, useSearchParams } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -14,10 +14,7 @@ import { fetchTasksByLocation } from "~/server/actions/task-outreach";
 import type { OutreachTaskListItem } from "~/lib/schemas/ui/task.schema";
 
 export default function TasksList() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
   const [searchParams] = useSearchParams<{ locationId?: string }>();
-  const navigate = useNavigate();
 
   // Get tasks for the location
   const [tasks] = createResource(
@@ -27,29 +24,6 @@ export default function TasksList() {
       return await fetchTasksByLocation(locationId);
     }
   );
-
-  // Simple auth check
-  onMount(async () => {
-    try {
-      const resp = await fetch("/api/auth/session");
-      if (!resp.ok) {
-        setIsAuthenticated(false);
-        navigate("/", { replace: true });
-        return;
-      }
-      const data = await resp.json();
-      setIsAuthenticated(!!data);
-      if (!data) {
-        navigate("/", { replace: true });
-      }
-    } catch (e) {
-      console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
-      navigate("/", { replace: true });
-    } finally {
-      setLoading(false);
-    }
-  });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -73,7 +47,6 @@ export default function TasksList() {
   };
 
   return (
-    <Show when={!loading()}>
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold text-gray-900">Tasks</h1>
@@ -202,6 +175,5 @@ export default function TasksList() {
           </For>
         </div>
       </div>
-    </Show>
   );
 }
