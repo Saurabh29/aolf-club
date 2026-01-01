@@ -21,6 +21,13 @@ import { AllowedActionsSchema, TargetTypeSchema } from "./task.schema";
  */
 export const TaskDefinitionSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
+  taskCode: z.string()
+    .min(1, "Task code is required")
+    .max(50, "Task code must be 50 characters or less")
+    .regex(/^[a-z0-9-]+$/, "Task code must contain only lowercase letters, numbers, and hyphens")
+    .refine((code) => !code.startsWith("-") && !code.endsWith("-"), {
+      message: "Task code cannot start or end with a hyphen",
+    }),
   locationId: z.string().ulid("Invalid location ID"),
   allowedActions: AllowedActionsSchema,
   callScript: z.string().max(5000).optional(),

@@ -25,6 +25,7 @@ export const TaskItemSchema = z.object({
   SK: z.literal("META"),
   itemType: z.literal("TASK"),
   taskId: z.string().ulid(),
+  taskCode: z.string(),
   locationId: z.string().ulid(),
   createdBy: z.string().ulid(),
   title: z.string(),

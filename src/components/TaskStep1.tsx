@@ -5,11 +5,13 @@
  * Used by both NEW and EDIT task flows.
  */
 
-import { createSignal, type Component, Show } from "solid-js";
+import { createSignal, createResource, type Component, Show } from "solid-js";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
+import { getCurrentUserId } from "~/server/actions/auth";
+import { getUserById } from "~/server/db/repositories/user.repository";
 import type { TaskDefinition } from "~/lib/schemas/ui";
 
 export interface TaskStep1Props {
@@ -19,8 +21,19 @@ export interface TaskStep1Props {
 }
 
 export const TaskStep1: Component<TaskStep1Props> = (props) => {
+  // Fetch user's active location
+  const [locationIdResource] = createResource(async () => {
+    try {
+      const userId = await getCurrentUserId();
+      const user = await getUserById(userId);
+      return user?.activeLocationId || null;
+    } catch {
+      return null;
+    }
+  });
+
   const [title, setTitle] = createSignal(props.initialData?.title ?? "");
-  const [locationId, setLocationId] = createSignal(props.initialData?.locationId ?? "");
+  const [taskCode, setTaskCode] = createSignal(props.initialData?.taskCode ?? "");
   const [allowCall, setAllowCall] = createSignal(props.initialData?.allowedActions?.call ?? true);
   const [allowMessage, setAllowMessage] = createSignal(props.initialData?.allowedActions?.message ?? true);
   const [callScript, setCallScript] = createSignal(props.initialData?.callScript ?? "");
@@ -36,8 +49,20 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
       newErrors.title = "Title must be 255 characters or less";
     }
 
-    if (!locationId().trim()) {
-      newErrors.locationId = "Location is required";
+    const code = taskCode().trim();
+    if (!code) {
+      newErrors.taskCode = "Task code is required";
+    } else if (code.length > 50) {
+      newErrors.taskCode = "Task code must be 50 characters or less";
+    } else if (!/^[a-z0-9-]+$/.test(code)) {
+      newErrors.taskCode = "Task code must contain only lowercase letters, numbers, and hyphens";
+    } else if (code.startsWith("-") || code.endsWith("-")) {
+      newErrors.taskCode = "Task code cannot start or end with a hyphen";
+    }
+
+    const locationId = locationIdResource();
+    if (!locationId) {
+      newErrors.locationId = "No active location found. Please select a location.";
     }
 
     if (!allowCall() && !allowMessage()) {
@@ -61,7 +86,8 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
 
     const data: TaskDefinition = {
       title: title().trim(),
-      locationId: locationId().trim(),
+      taskCode: taskCode().trim().toLowerCase(),
+      locationId: locationIdResource()!,
       allowedActions: {
         call: allowCall(),
         message: allowMessage(),
@@ -96,23 +122,45 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
             </Show>
           </div>
 
-          {/* Location */}
+          {/* Task Code */}
           <div>
-            <Label for="locationId">Location *</Label>
+            <Label for="taskCode">Task Code *</Label>
             <Input
-              id="locationId"
+              id="taskCode"
               type="text"
-              value={locationId()}
-              onInput={(e) => setLocationId(e.currentTarget.value)}
-              placeholder="Location ID (ULID format)"
+              value={taskCode()}
+              onInput={(e) => setTaskCode(e.currentTarget.value.toLowerCase())}
+              placeholder="e.g., sunday-event-calls"
               class="mt-1"
             />
+            <p class="text-xs text-gray-500 mt-1">
+              URL-safe code (lowercase, numbers, hyphens only). Used in task URLs.
+            </p>
+            <Show when={errors().taskCode}>
+              <p class="text-sm text-red-600 mt-1">{errors().taskCode}</p>
+            </Show>
+          </div>
+
+          {/* Location (Auto-filled) */}
+          <div>
+            <Label>Location</Label>
+            <Show when={locationIdResource.loading}>
+              <p class="text-sm text-gray-500 mt-1">Loading location...</p>
+            </Show>
+            <Show when={!locationIdResource.loading && locationIdResource()}>
+              <div class="mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700">
+                {locationIdResource()}
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                Using your active location
+              </p>
+            </Show>
+            <Show when={!locationIdResource.loading && !locationIdResource()}>
+              <p class="text-sm text-red-600 mt-1">No active location found. Please select a location from your profile.</p>
+            </Show>
             <Show when={errors().locationId}>
               <p class="text-sm text-red-600 mt-1">{errors().locationId}</p>
             </Show>
-            <p class="text-xs text-gray-500 mt-1">
-              Future: Location dropdown will be implemented
-            </p>
           </div>
         </CardContent>
       </Card>

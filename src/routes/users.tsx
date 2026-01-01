@@ -22,6 +22,7 @@ export default function UserManagement() {
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);
+  const [activeTab, setActiveTab] = createSignal<"members" | "leads">("members");
 
   // Fetch users for active location (no dummy data)
   const [usersResource, { refetch }] = createResource(async () => {
@@ -58,6 +59,11 @@ export default function UserManagement() {
   const handleSelectionChange = (selectedIds: string[]) => {
     console.log("Selected user IDs:", selectedIds);
   };
+  
+  // Track which tab is open for import dialog
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "members" | "leads");
+  };
 
   const leads = createMemo(() => (usersResource() || []).filter((u) => u.userType === "LEAD"));
   const members = createMemo(() => (usersResource() || []).filter((u) => u.userType === "MEMBER"));
@@ -74,6 +80,7 @@ export default function UserManagement() {
         open={showImportUsers()}
         onOpenChange={setShowImportUsers}
         onUsersImported={() => refetch()}
+        defaultUserType={activeTab() === "leads" ? "LEAD" : "MEMBER"}
       />
       
       <div class="mb-6 flex items-center justify-between">
@@ -107,7 +114,7 @@ export default function UserManagement() {
       </Show>
 
       <Show when={!usersResource.loading && usersResource()}>
-        <Tabs defaultValue="members">
+        <Tabs defaultValue="members" onChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>

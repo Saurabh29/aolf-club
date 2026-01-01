@@ -5,7 +5,7 @@
  * Shows selection status and allows multi-select.
  */
 
-import { For, Show, createSignal, createMemo, type Component } from "solid-js";
+import { For, Show, createSignal, createMemo, createResource, type Component } from "solid-js";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import {
   Table,
@@ -17,47 +17,8 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { getUsersForActiveLocation, type UserWithGroup } from "~/server/actions/users";
 import type { TargetUser } from "~/lib/schemas/ui";
-
-// Dummy data for demonstration
-const DUMMY_MEMBERS: TargetUser[] = [
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4MEMBER1",
-    name: "Rajesh Kumar",
-    phone: "+91 98765 43210",
-    email: "rajesh@example.com",
-    targetType: "MEMBER",
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4MEMBER2",
-    name: "Priya Sharma",
-    phone: "+91 98765 43211",
-    email: "priya@example.com",
-    targetType: "MEMBER",
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4MEMBER3",
-    name: "Amit Patel",
-    phone: "+91 98765 43212",
-    targetType: "MEMBER",
-  },
-];
-
-const DUMMY_LEADS: TargetUser[] = [
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4LEAD001",
-    name: "Sunita Reddy",
-    phone: "+91 98765 43220",
-    email: "sunita@example.com",
-    targetType: "LEAD",
-  },
-  {
-    userId: "01HZXK7G2MJQK3RTWVB4LEAD002",
-    name: "Vikram Singh",
-    phone: "+91 98765 43221",
-    targetType: "LEAD",
-  },
-];
 
 export interface TaskStep2Props {
   initialSelection?: TargetUser[];
@@ -66,18 +27,43 @@ export interface TaskStep2Props {
 }
 
 export const TaskStep2: Component<TaskStep2Props> = (props) => {
+  // Fetch users from DB
+  const [usersResource] = createResource(async () => {
+    const result = await getUsersForActiveLocation();
+    if (!result.success) {
+      console.error("Failed to load users:", result.error);
+      return [];
+    }
+    return result.data;
+  });
+
   const [selectedIds, setSelectedIds] = createSignal<Set<string>>(
     new Set((props.initialSelection ?? []).map((t) => t.userId))
   );
   const [activeTab, setActiveTab] = createSignal<"MEMBER" | "LEAD">("MEMBER");
 
+  // Convert UserWithGroup to TargetUser
+  const convertToTargetUser = (user: UserWithGroup): TargetUser => ({
+    userId: user.userId,
+    name: user.displayName,
+    phone: user.phone,
+    email: user.email,
+    targetType: user.userType,
+  });
+
   // Available users based on active tab
   const availableUsers = createMemo(() => {
-    return activeTab() === "MEMBER" ? DUMMY_MEMBERS : DUMMY_LEADS;
+    const users = usersResource() || [];
+    return users
+      .filter((u) => u.userType === activeTab())
+      .map(convertToTargetUser);
   });
 
   // All users (members + leads)
-  const allUsers = createMemo(() => [...DUMMY_MEMBERS, ...DUMMY_LEADS]);
+  const allUsers = createMemo(() => {
+    const users = usersResource() || [];
+    return users.map(convertToTargetUser);
+  });
 
   // Selected user objects
   const selectedTargets = createMemo(() => {
@@ -128,7 +114,27 @@ export const TaskStep2: Component<TaskStep2Props> = (props) => {
 
   return (
     <div class="space-y-6">
-      <Card>
+      {/* Loading State */}
+      <Show when={usersResource.loading}>
+        <Card>
+          <CardContent class="py-12 text-center text-gray-500">
+            Loading users...
+          </CardContent>
+        </Card>
+      </Show>
+
+      {/* Error State */}
+      <Show when={usersResource.error}>
+        <Card class="border-red-200 bg-red-50">
+          <CardContent class="pt-6">
+            <p class="text-red-800">Failed to load users: {String(usersResource.error)}</p>
+          </CardContent>
+        </Card>
+      </Show>
+
+      {/* Main Content */}
+      <Show when={!usersResource.loading && !usersResource.error}>
+        <Card>
         <CardHeader>
           <CardTitle>Select Target Users</CardTitle>
           <p class="text-sm text-gray-600 mt-2">
@@ -163,7 +169,7 @@ export const TaskStep2: Component<TaskStep2Props> = (props) => {
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Members ({DUMMY_MEMBERS.length})
+              Members ({(usersResource() || []).filter(u => u.userType === 'MEMBER').length})
             </button>
             <button
               type="button"
@@ -174,7 +180,7 @@ export const TaskStep2: Component<TaskStep2Props> = (props) => {
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Leads ({DUMMY_LEADS.length})
+              Leads ({(usersResource() || []).filter(u => u.userType === 'LEAD').length})
             </button>
           </div>
 
@@ -253,12 +259,9 @@ export const TaskStep2: Component<TaskStep2Props> = (props) => {
               </TableBody>
             </Table>
           </div>
-
-          <p class="text-xs text-gray-500">
-            Note: This is dummy data. Backend integration will load real members/leads from the database.
-          </p>
         </CardContent>
       </Card>
+      </Show>
 
       {/* Actions */}
       <div class="flex justify-between items-center pt-4">

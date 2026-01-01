@@ -6,19 +6,30 @@
  */
 
 import { Show, For, createResource } from "solid-js";
-import { A, useSearchParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fetchTasksByLocation } from "~/server/actions/task-outreach";
+import { getCurrentUserId } from "~/server/actions/auth";
+import { getUserById } from "~/server/db/repositories/user.repository";
 import type { OutreachTaskListItem } from "~/lib/schemas/ui/task.schema";
 
 export default function TasksList() {
-  const [searchParams] = useSearchParams<{ locationId?: string }>();
+  // Get current user's active location
+  const [locationIdResource] = createResource(async () => {
+    try {
+      const userId = await getCurrentUserId();
+      const user = await getUserById(userId);
+      return user?.activeLocationId || null;
+    } catch {
+      return null;
+    }
+  });
 
   // Get tasks for the location
   const [tasks] = createResource(
-    () => searchParams.locationId,
+    () => locationIdResource(),
     async (locationId) => {
       if (!locationId) return [];
       return await fetchTasksByLocation(locationId);
@@ -50,8 +61,8 @@ export default function TasksList() {
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold text-gray-900">Tasks</h1>
-          <Show when={searchParams.locationId}>
-            <A href={`/tasks/new?locationId=${searchParams.locationId}`}>
+          <Show when={locationIdResource() && !locationIdResource.loading}>
+            <A href={`/tasks/new`}>
               <Button variant="default">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -62,11 +73,11 @@ export default function TasksList() {
           </Show>
         </div>
 
-        <Show when={!searchParams.locationId}>
+        <Show when={!locationIdResource() && !locationIdResource.loading}>
           <Card class="border-yellow-200 bg-yellow-50">
             <CardContent class="pt-6">
               <p class="text-yellow-800">
-                Please select a location to view tasks. Add <code>?locationId=YOUR_LOCATION_ID</code> to the URL.
+                No active location selected. Please select a location from your profile.
               </p>
             </CardContent>
           </Card>
@@ -88,7 +99,7 @@ export default function TasksList() {
           </Card>
         </Show>
 
-        <Show when={tasks() && tasks()!.length === 0 && searchParams.locationId}>
+        <Show when={tasks() && tasks()!.length === 0 && locationIdResource()}>
           <Card>
             <CardContent class="py-12 text-center text-gray-500">
               <p class="text-lg font-medium">No tasks found</p>

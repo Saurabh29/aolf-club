@@ -1,20 +1,30 @@
-import { createSignal, Show, type Component } from "solid-js";
+import { createSignal, Show, createEffect, type Component } from "solid-js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
+import { RadioGroup, RadioGroupItem, RadioGroupItemLabel } from "~/components/ui/radio-group";
 import { importUsersFromCSV } from "~/server/actions/users";
 
 export interface ImportUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUsersImported?: () => void;
+  defaultUserType?: "MEMBER" | "LEAD";
 }
 
 export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
   const [csvContent, setCsvContent] = createSignal("");
+  const [userType, setUserType] = createSignal<"MEMBER" | "LEAD">(props.defaultUserType || "MEMBER");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [result, setResult] = createSignal<{ imported: number; failed: number; errors: string[] } | null>(null);
+
+  // Update userType when dialog opens with different defaultUserType
+  createEffect(() => {
+    if (props.open && props.defaultUserType) {
+      setUserType(props.defaultUserType);
+    }
+  });
 
   const handleFileChange = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
@@ -104,6 +114,18 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
             <p class="text-xs text-gray-500">
               Expected columns: name/full_name, email/mail, phone/mobile/contact
             </p>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Import As</Label>
+            <RadioGroup value={userType()} onChange={setUserType}>
+              <RadioGroupItem value="MEMBER">
+                <RadioGroupItemLabel>Member</RadioGroupItemLabel>
+              </RadioGroupItem>
+              <RadioGroupItem value="LEAD">
+                <RadioGroupItemLabel>Lead</RadioGroupItemLabel>
+              </RadioGroupItem>
+            </RadioGroup>
           </div>
 
           <Show when={csvContent()}>

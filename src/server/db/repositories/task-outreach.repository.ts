@@ -664,7 +664,7 @@ export async function getTasksAssignedToUser(userId: string): Promise<OutreachTa
  */
 export async function createTask(
   createdBy: string,
-  definition: { title: string; locationId: string; allowedActions: { call: boolean; message: boolean }; callScript?: string; messageTemplate?: string },
+  definition: { title: string; taskCode: string; locationId: string; allowedActions: { call: boolean; message: boolean }; callScript?: string; messageTemplate?: string },
   targetUserIds: string[],
   assignments?: Array<{ assigneeUserId: string; targetUserIds: string[] }>
 ): Promise<string> {
@@ -702,6 +702,7 @@ export async function createTask(
     SK: "META",
     itemType: "TASK",
     taskId,
+    taskCode: definition.taskCode,
     locationId: definition.locationId,
     title: definition.title,
     allowedActions: definition.allowedActions,

@@ -45,6 +45,16 @@ export interface UserTableProps {
 export const UserTable: Component<UserTableProps> = (props) => {
   const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
 
+  // Sort users: unassigned first, then assigned
+  const sortedUsers = createMemo(() => {
+    return [...props.users].sort((a, b) => {
+      const aHasGroups = a.groups.length > 0;
+      const bHasGroups = b.groups.length > 0;
+      if (aHasGroups === bHasGroups) return 0;
+      return aHasGroups ? 1 : -1; // Unassigned (no groups) first
+    });
+  });
+
   // Computed: Are all users selected?
   const allSelected = createMemo(() => {
     return props.users.length > 0 && selectedIds().size === props.users.length;
@@ -163,6 +173,7 @@ export const UserTable: Component<UserTableProps> = (props) => {
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
+              <TableHead>Assignment Status</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Joined</TableHead>
@@ -173,13 +184,13 @@ export const UserTable: Component<UserTableProps> = (props) => {
               when={props.users.length > 0}
               fallback={
                 <TableRow>
-                  <TableCell colspan={6} class="text-center text-gray-500 py-8">
+                  <TableCell colspan={7} class="text-center text-gray-500 py-8">
                     No users found
                   </TableCell>
                 </TableRow>
               }
             >
-              <For each={props.users}>
+              <For each={sortedUsers()}>
                 {(user) => (
                   <TableRow
                     class="cursor-pointer"
@@ -204,6 +215,13 @@ export const UserTable: Component<UserTableProps> = (props) => {
                         {user.phone && <div>{user.phone}</div>}
                         {!user.email && !user.phone && <span class="text-gray-400">—</span>}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.groups.length > 0 ? (
+                        <Badge variant="secondary">Assigned</Badge>
+                      ) : (
+                        <Badge variant="outline">Unassigned</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div class="flex flex-wrap gap-1">
