@@ -11,7 +11,8 @@
 
 import { Show, createSignal, onMount } from "solid-js";
 import { A } from "@solidjs/router";
-import { Avatar } from "~/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
+import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import type { AuthSession } from "~/lib/schemas/ui";
@@ -38,6 +39,14 @@ export default function AppHeader() {
 
   // dropdown primitive handles outside-click and Escape; no manual listeners
 
+  const getInitials = (nameOrEmail?: string | null) => {
+    if (!nameOrEmail) return "";
+    const parts = nameOrEmail.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   return (
     <header class="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b border-gray-200 shadow-sm">
       <div class="h-full px-4 flex items-center justify-between max-w-screen-2xl mx-auto">
@@ -55,7 +64,14 @@ export default function AppHeader() {
           <Show when={session()} fallback={
             <DropdownMenu>
                 <DropdownMenuTrigger as={Button<"button">} variant="outline" size="sm" class="p-2">
-                <Avatar class="h-5 w-5" />
+                <Avatar class="h-5 w-5">
+                  <Show when={!session()}>
+                    <UserIcon class="h-4 w-4 text-gray-600" />
+                  </Show>
+                  <AvatarFallback>
+                    <UserIcon class="h-4 w-4 text-gray-600" />
+                  </AvatarFallback>
+                </Avatar>
                 <span class="ml-2 hidden sm:inline">Sign in</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent class="w-48">
@@ -95,9 +111,12 @@ export default function AppHeader() {
               }
             }}>
               <DropdownMenuTrigger as={Button<"button">} variant="ghost" size="sm" class="flex items-center gap-2">
-                <Show when={session()?.user?.image}>
-                  <img src={session()!.user!.image!} alt="User avatar" class="h-6 w-6 rounded-full" />
-                </Show>
+                <Avatar class="h-6 w-6">
+                  <Show when={session()?.user?.image}>
+                    <AvatarImage src={session()!.user!.image!} alt="User avatar" class="h-full w-full object-cover" />
+                  </Show>
+                  <AvatarFallback>{getInitials(session()?.user?.name ?? session()?.user?.email ?? null)}</AvatarFallback>
+                </Avatar>
                 <span class="hidden sm:inline">{session()?.user?.name || session()?.user?.email || "User"}</span>
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
