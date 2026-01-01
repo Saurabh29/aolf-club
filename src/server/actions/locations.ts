@@ -27,6 +27,7 @@ import {
   createUserGroup,
   addUserToGroup,
 } from "~/server/db/repositories/userGroup.repository";
+import { addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { assignRoleToGroup, createRole } from "~/server/db/repositories/permission.repository";
 import { getCurrentUserId } from "./auth"; 
 import {
@@ -126,6 +127,12 @@ export async function createLocation(
       try {
         const userId = await getCurrentUserId();
         await addUserToGroup(userId, adminGroup.groupId, { locationId: dbLocation.locationId, groupType: "ADMIN" });
+        try {
+          // Also create the location ↔ user edges so the user appears in location user lists
+          await addUserToLocation(userId, dbLocation.locationId);
+        } catch (e) {
+          console.warn("Failed to add creator to location edges:", e);
+        }
       } catch (e) {
         // If auth not available or addition fails, log and continue
         console.warn("Failed to add creator to admin group:", e);
