@@ -30,10 +30,6 @@ export const TaskItemSchema = z.object({
   createdBy: z.string().ulid(),
   title: z.string(),
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED"]),
-  allowedActions: z.object({
-    call: z.boolean(),
-    message: z.boolean(),
-  }),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

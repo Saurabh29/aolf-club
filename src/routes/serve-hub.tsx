@@ -228,12 +228,8 @@ export default function ServeHub() {
             </CardHeader>
             <CardContent>
               <div class="flex gap-4 text-sm text-gray-600">
-                <Show when={taskDetails()!.allowedActions.call}>
-                  <Badge variant="outline">📞 Calling enabled</Badge>
-                </Show>
-                <Show when={taskDetails()!.allowedActions.message}>
-                  <Badge variant="outline">💬 Messaging enabled</Badge>
-                </Show>
+                <Badge variant="outline">📞 Calling enabled</Badge>
+                <Badge variant="outline">💬 Messaging enabled</Badge>
               </div>
             </CardContent>
           </Card>
@@ -294,30 +290,26 @@ export default function ServeHub() {
                     <CardContent class="space-y-4">
                       {/* Action Buttons */}
                       <div class="flex flex-wrap gap-2">
-                        <Show when={taskDetails()!.allowedActions.call}>
-                          <Button
-                            as="a"
-                            href={`tel:${user.phone}`}
-                            variant="default"
-                            size="sm"
-                            onClick={() => updateInteraction(user.targetUserId, "called", true)}
-                          >
-                            📞 Call
-                          </Button>
-                        </Show>
-                        <Show when={taskDetails()!.allowedActions.message}>
-                          <Button
-                            as="a"
-                            href={`https://wa.me/${user.phone.replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            variant="default"
-                            size="sm"
-                            onClick={() => updateInteraction(user.targetUserId, "messaged", true)}
-                          >
-                            💬 WhatsApp
-                          </Button>
-                        </Show>
+                        <Button
+                          as="a"
+                          href={`tel:${user.phone}`}
+                          variant="default"
+                          size="sm"
+                          onClick={() => updateInteraction(user.targetUserId, "called", true)}
+                        >
+                          📞 Call
+                        </Button>
+                        <Button
+                          as="a"
+                          href={`https://wa.me/${user.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="default"
+                          size="sm"
+                          onClick={() => updateInteraction(user.targetUserId, "messaged", true)}
+                        >
+                          💬 WhatsApp
+                        </Button>
                       </div>
                       
                       {/* Actions Taken */}

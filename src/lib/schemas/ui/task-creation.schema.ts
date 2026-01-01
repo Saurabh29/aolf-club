@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { AllowedActionsSchema, TargetTypeSchema } from "./task.schema";
+import { TargetTypeSchema } from "./task.schema";
 
 /**
  * Step 1: Task Definition
@@ -29,7 +29,6 @@ export const TaskDefinitionSchema = z.object({
       message: "Task code cannot start or end with a hyphen",
     }),
   locationId: z.string().ulid("Invalid location ID"),
-  allowedActions: AllowedActionsSchema,
   callScript: z.string().max(5000).optional(),
   messageTemplate: z.string().max(2000).optional(),
 });

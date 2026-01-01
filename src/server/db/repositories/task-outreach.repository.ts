@@ -101,7 +101,6 @@ export async function getTaskById(taskId: string): Promise<OutreachTask | null> 
     createdByName,
     title: item.title,
     status: item.status,
-    allowedActions: item.allowedActions,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -270,7 +269,6 @@ export async function getTasksByLocation(locationId: string): Promise<OutreachTa
         title: task.title,
         locationName: task.locationName,
         status: task.status,
-        allowedActions: task.allowedActions,
         totalTargets: targets.length,
         assignedCount: assignments.length,
         createdAt: task.createdAt,
@@ -649,7 +647,6 @@ export async function getTasksAssignedToUser(userId: string): Promise<OutreachTa
       title: task.title,
       locationName: task.locationName,
       status: task.status,
-      allowedActions: task.allowedActions,
       totalTargets: targets.length,
       assignedCount: allAssignments.length,
       createdAt: task.createdAt,
@@ -664,7 +661,7 @@ export async function getTasksAssignedToUser(userId: string): Promise<OutreachTa
  */
 export async function createTask(
   createdBy: string,
-  definition: { title: string; taskCode: string; locationId: string; allowedActions: { call: boolean; message: boolean }; callScript?: string; messageTemplate?: string },
+  definition: { title: string; taskCode: string; locationId: string; callScript?: string; messageTemplate?: string },
   targetUserIds: string[],
   assignments?: Array<{ assigneeUserId: string; targetUserIds: string[] }>
 ): Promise<string> {
@@ -705,7 +702,6 @@ export async function createTask(
     taskCode: definition.taskCode,
     locationId: definition.locationId,
     title: definition.title,
-    allowedActions: definition.allowedActions,
     status: "OPEN",
     createdBy,
     createdAt: now,

@@ -141,11 +141,7 @@ export type AssignmentMode = z.infer<typeof AssignmentModeSchema>;
 /**
  * Allowed Actions - What actions volunteers can take
  */
-export const AllowedActionsSchema = z.object({
-  call: z.boolean(),
-  message: z.boolean(),
-});
-export type AllowedActions = z.infer<typeof AllowedActionsSchema>;
+// Allowed actions removed: call and message are always permitted
 
 /**
  * Actions Taken - What actions were actually performed
@@ -167,7 +163,6 @@ export const OutreachTaskSchema = z.object({
   createdByName: z.string(),
   title: z.string().min(1).max(255),
   status: OutreachTaskStatusSchema,
-  allowedActions: AllowedActionsSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -181,7 +176,6 @@ export const OutreachTaskListItemSchema = z.object({
   title: z.string(),
   locationName: z.string(),
   status: OutreachTaskStatusSchema,
-  allowedActions: AllowedActionsSchema,
   totalTargets: z.number().int().min(0),
   assignedCount: z.number().int().min(0),
   createdAt: z.string().datetime(),

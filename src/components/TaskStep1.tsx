@@ -34,8 +34,6 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
 
   const [title, setTitle] = createSignal(props.initialData?.title ?? "");
   const [taskCode, setTaskCode] = createSignal(props.initialData?.taskCode ?? "");
-  const [allowCall, setAllowCall] = createSignal(props.initialData?.allowedActions?.call ?? true);
-  const [allowMessage, setAllowMessage] = createSignal(props.initialData?.allowedActions?.message ?? true);
   const [callScript, setCallScript] = createSignal(props.initialData?.callScript ?? "");
   const [messageTemplate, setMessageTemplate] = createSignal(props.initialData?.messageTemplate ?? "");
   const [errors, setErrors] = createSignal<Record<string, string>>({});
@@ -65,10 +63,6 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
       newErrors.locationId = "No active location found. Please select a location.";
     }
 
-    if (!allowCall() && !allowMessage()) {
-      newErrors.allowedActions = "At least one action (Call or Message) must be enabled";
-    }
-
     if (callScript().length > 5000) {
       newErrors.callScript = "Call script must be 5000 characters or less";
     }
@@ -88,10 +82,7 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
       title: title().trim(),
       taskCode: taskCode().trim().toLowerCase(),
       locationId: locationIdResource()!,
-      allowedActions: {
-        call: allowCall(),
-        message: allowMessage(),
-      },
+      // call and message always allowed
       callScript: callScript().trim() || undefined,
       messageTemplate: messageTemplate().trim() || undefined,
     };
@@ -141,60 +132,11 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
             </Show>
           </div>
 
-          {/* Location (Auto-filled) */}
-          <div>
-            <Label>Location</Label>
-            <Show when={locationIdResource.loading}>
-              <p class="text-sm text-gray-500 mt-1">Loading location...</p>
-            </Show>
-            <Show when={!locationIdResource.loading && locationIdResource()}>
-              <div class="mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700">
-                {locationIdResource()}
-              </div>
-              <p class="text-xs text-gray-500 mt-1">
-                Using your active location
-              </p>
-            </Show>
-            <Show when={!locationIdResource.loading && !locationIdResource()}>
-              <p class="text-sm text-red-600 mt-1">No active location found. Please select a location from your profile.</p>
-            </Show>
-            <Show when={errors().locationId}>
-              <p class="text-sm text-red-600 mt-1">{errors().locationId}</p>
-            </Show>
-          </div>
+          {/* Location is auto-detected; not displayed here */}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Allowed Actions</CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-4">
-          <div class="flex items-center gap-6">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowCall()}
-                onChange={(e) => setAllowCall(e.currentTarget.checked)}
-                class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="text-sm font-medium text-gray-700">Enable Call</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowMessage()}
-                onChange={(e) => setAllowMessage(e.currentTarget.checked)}
-                class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="text-sm font-medium text-gray-700">Enable Message</span>
-            </label>
-          </div>
-          <Show when={errors().allowedActions}>
-            <p class="text-sm text-red-600">{errors().allowedActions}</p>
-          </Show>
-        </CardContent>
-      </Card>
+      {/* Allowed Actions removed: Call & Message always allowed */}
 
       <Card>
         <CardHeader>
@@ -250,8 +192,8 @@ export const TaskStep1: Component<TaskStep1Props> = (props) => {
             Cancel
           </Button>
         </Show>
-        <Button variant="default" onClick={handleNext} class="ml-auto">
-          Next: Select Targets
+        <Button variant="default" onClick={handleNext} class="ml-auto" disabled={locationIdResource.loading || !locationIdResource()}>
+          {locationIdResource.loading ? "Detecting location..." : "Next: Select Targets"}
         </Button>
       </div>
     </div>
