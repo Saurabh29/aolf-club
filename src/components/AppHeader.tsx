@@ -15,13 +15,13 @@ import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
-import { getSessionQuery } from "~/lib/auth";
+import { getAuthSession } from "~/lib/auth";
 import { getUserLocations, setActiveLocation } from "~/server/actions/locations";
 
 export default function AppHeader() {
-  // Use shared session query - cacheable across all pages/components
+  // Use unified getAuthSession - works as both query and direct call
   // deferStream: true prevents hydration mismatch by streaming auth UI after initial HTML
-  const session = createAsync(() => getSessionQuery(), { deferStream: true });
+  const session = createAsync(() => getAuthSession(), { deferStream: true });
   const [dropdownOpen, setDropdownOpen] = createSignal(false);
   const [userLocations, setUserLocations] = createSignal<Array<{ id: string; name: string }>>([]);
   const [activeLocationId, setActiveLocationId] = createSignal<string | null>(null);

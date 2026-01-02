@@ -2,13 +2,10 @@ import { isServer } from "solid-js/web";
 import { query } from "@solidjs/router";
 
 /**
- * Unified session fetcher that works on both client and server.
- * On server: uses StartAuthJS getSession with request event.
- * On client: fetches from /api/auth/session endpoint.
+ * Internal implementation for fetching session data.
+ * Works on both client and server.
  */
-export async function getAuthSession(): Promise<any | null> {
-  // Check if we're in a browser environment
-	  
+async function _fetchSession(): Promise<any | null> {
   if (isServer) {
     // Server-side path - use dynamic imports to avoid loading server code on client
     try {
@@ -38,6 +35,28 @@ export async function getAuthSession(): Promise<any | null> {
   }
 }
 
+/**
+ * Unified session query that works seamlessly on both server and client.
+ * 
+ * Usage in components (with caching):
+ *   const session = createAsync(() => getAuthSession());
+ * 
+ * Usage in server actions (direct call):
+ *   const session = await getAuthSession();
+ * 
+ * The query wrapper provides caching when used with createAsync,
+ * but can also be called directly as a regular async function.
+ */
+export const getAuthSession = query(async () => {
+  "use server";
+  try {
+    return await _fetchSession();
+  } catch (e) {
+    console.error("Failed to fetch session:", e);
+    return null;
+  }
+}, "auth-session");
+
 export type SessionInfo = {
   userId: string | null;
   activeLocationId: string | null;
@@ -51,9 +70,11 @@ export type SessionInfo = {
  * Get full session info including user details.
  * Returns userId, activeLocationId, email, name, image from the session.
  * Works on both client and server.
+ * Uses getAuthSession for automatic caching when called from client.
  */
 export async function getSessionInfo(): Promise<SessionInfo> {
   try {
+    // Use getAuthSession to benefit from query caching
     const session = await getAuthSession();
     const raw = session ?? null;
     const userId = raw?.user?.id || raw?.user?.userId || raw?.user?.sub || null;
@@ -104,24 +125,3 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     };
   }
 }
-
-/**
- * Shared query for session data - reusable across all pages/components.
- * Use with createAsync(() => getSessionQuery()) in any component.
- * 
- * Example:
- *   import { getSessionQuery } from "~/lib/auth";
- *   import { createAsync } from "@solidjs/router";
- *   
- *   const session = createAsync(() => getSessionQuery());
- */
-export const getSessionQuery = query(async () => {
-  "use server";
-  try {
-    const data = await getAuthSession();
-    return data ?? null;
-  } catch (e) {
-    console.error("Failed to fetch session:", e);
-    return null;
-  }
-}, "auth-session");
