@@ -41,6 +41,39 @@ export async function fetchMyTasks(): Promise<OutreachTaskListItem[]> {
 }
 
 /**
+ * Fetch tasks for the current user's active location
+ */
+export async function fetchTasksForActiveLocation(): Promise<OutreachTaskListItem[]> {
+  try {
+    const session = await getSessionInfo();
+    const locationId = session.activeLocationId;
+    
+    if (!locationId) {
+      // Return empty array if no active location
+      return [];
+    }
+    
+    return await taskRepo.getTasksByLocation(locationId);
+  } catch (error) {
+    console.error("[fetchTasksForActiveLocation] Error:", error);
+    throw new Error("Failed to fetch tasks for active location");
+  }
+}
+
+/**
+ * Get the current user's active location ID (for UI conditional rendering)
+ */
+export async function getActiveLocationId(): Promise<string | null> {
+  try {
+    const session = await getSessionInfo();
+    return session.activeLocationId;
+  } catch (error) {
+    console.error("[getActiveLocationId] Error:", error);
+    return null;
+  }
+}
+
+/**
  * Fetch task details by taskId (alias for fetchTask)
  */
 export async function fetchTaskById(taskId: string): Promise<OutreachTask | null> {
