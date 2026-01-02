@@ -1,4 +1,6 @@
 import { isServer } from "solid-js/web";
+import { query } from "@solidjs/router";
+
 /**
  * Unified session fetcher that works on both client and server.
  * On server: uses StartAuthJS getSession with request event.
@@ -6,8 +8,7 @@ import { isServer } from "solid-js/web";
  */
 export async function getAuthSession(): Promise<any | null> {
   // Check if we're in a browser environment
-  const isBrowser = typeof window !== "undefined";
-  
+	  
   if (isServer) {
     // Server-side path - use dynamic imports to avoid loading server code on client
     try {
@@ -103,3 +104,24 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     };
   }
 }
+
+/**
+ * Shared query for session data - reusable across all pages/components.
+ * Use with createAsync(() => getSessionQuery()) in any component.
+ * 
+ * Example:
+ *   import { getSessionQuery } from "~/lib/auth";
+ *   import { createAsync } from "@solidjs/router";
+ *   
+ *   const session = createAsync(() => getSessionQuery());
+ */
+export const getSessionQuery = query(async () => {
+  "use server";
+  try {
+    const data = await getAuthSession();
+    return data ?? null;
+  } catch (e) {
+    console.error("Failed to fetch session:", e);
+    return null;
+  }
+}, "auth-session");

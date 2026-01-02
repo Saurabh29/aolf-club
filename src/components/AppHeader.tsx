@@ -9,33 +9,22 @@
  * Uses solid-ui components only.
  */
 
-import { Show, createSignal, onMount } from "solid-js";
-import { A } from "@solidjs/router";
+import { Show, createSignal } from "solid-js";
+import { A, createAsync } from "@solidjs/router";
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
-import type { AuthSession } from "~/lib/schemas/ui";
-import { getAuthSession } from "~/lib/auth";
+import { getSessionQuery } from "~/lib/auth";
 import { getUserLocations, setActiveLocation } from "~/server/actions/locations";
 
 export default function AppHeader() {
-  const [session, setSession] = createSignal<AuthSession | null>(null);
+  // Use shared session query - cacheable across all pages/components
+  // deferStream: true prevents hydration mismatch by streaming auth UI after initial HTML
+  const session = createAsync(() => getSessionQuery(), { deferStream: true });
   const [dropdownOpen, setDropdownOpen] = createSignal(false);
   const [userLocations, setUserLocations] = createSignal<Array<{ id: string; name: string }>>([]);
   const [activeLocationId, setActiveLocationId] = createSignal<string | null>(null);
-
-  // Reuse OAuth session fetch logic from test-oauth.tsx
-  // Centralized session fetch
-  onMount(async () => {
-    try {
-      const data = await getAuthSession();
-      setSession(data ?? null);
-    } catch (e) {
-      console.error("Failed to fetch session:", e);
-      setSession(null);
-    }
-  });
 
   // dropdown primitive handles outside-click and Escape; no manual listeners
 
