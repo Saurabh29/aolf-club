@@ -54,13 +54,7 @@ export async function getUsersForActiveLocation(): Promise<ActionResult<UserWith
   try {
     // Get current user to determine active location
     const session = await getSessionInfo();
-    const currentUserId = session.userId;
-    if (!currentUserId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const currentUserId = session.userId!; // Guaranteed by middleware
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -134,13 +128,7 @@ export async function createUserManual(input: CreateUserInput): Promise<ActionRe
   try {
     // Get current user's active location
     const session = await getSessionInfo();
-    const currentUserId = session.userId;
-    if (!currentUserId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const currentUserId = session.userId!; // Guaranteed by middleware
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -228,13 +216,7 @@ export async function importUsersFromCSV(input: ImportUsersInput): Promise<Actio
   try {
     // Get current user's active location
     const session = await getSessionInfo();
-    const currentUserId = session.userId;
-    if (!currentUserId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const currentUserId = session.userId!; // Guaranteed by middleware
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -347,13 +329,7 @@ export async function assignUsersToGroup(
   try {
     // Get current user's active location
     const session = await getSessionInfo();
-    const currentUserId = session.userId;
-    if (!currentUserId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const currentUserId = session.userId!; // Guaranteed by middleware
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {

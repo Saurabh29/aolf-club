@@ -37,21 +37,6 @@ export async function getAuthSession(): Promise<any | null> {
   }
 }
 
-/**
- * Get the current authenticated user ID.
- * Works on both client and server.
- */
-export async function getCurrentUserId(): Promise<string> {
-  const session = await getAuthSession();
-  const userId = session?.user?.id || session?.user?.userId || session?.user?.sub || null;
-  
-  if (!userId) {
-    throw new Error("Authenticated session does not contain application userId");
-  }
-  
-  return userId as string;
-}
-
 export type SessionInfo = {
   userId: string | null;
   activeLocationId: string | null;

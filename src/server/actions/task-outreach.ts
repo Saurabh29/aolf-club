@@ -29,8 +29,7 @@ import { getSessionInfo } from "~/lib/auth";
 export async function fetchMyTasks(): Promise<OutreachTaskListItem[]> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     // Query USER#userId + SK begins_with TASKASSIGNMENT#
     // Then join with TASK items to get full details
     return await taskRepo.getTasksAssignedToUser(userId);
@@ -49,8 +48,7 @@ export async function fetchTasksForActiveLocation(): Promise<OutreachTaskListIte
     const locationId = session.activeLocationId;
     
     if (!locationId) {
-      // Return empty array if no active location
-      return [];
+      return []; // No active location set
     }
     
     return await taskRepo.getTasksByLocation(locationId);
@@ -115,8 +113,7 @@ export async function fetchTasksByLocation(locationId: string): Promise<Outreach
 export async function fetchMyAssignedUsers(taskId: string): Promise<AssignedUser[]> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     return await taskRepo.getAssignedUsersWithInteractions(taskId, userId);
   } catch (error) {
     console.error("[fetchMyAssignedUsers] Error:", error);
@@ -142,8 +139,7 @@ export async function fetchUnassignedCount(taskId: string): Promise<number> {
 export async function selfAssign(request: SelfAssignRequest): Promise<SelfAssignResult> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     return await taskRepo.selfAssignUsers(request.taskId, userId, request.count);
   } catch (error: any) {
     console.error("[selfAssign] Error:", error);
@@ -157,8 +153,7 @@ export async function selfAssign(request: SelfAssignRequest): Promise<SelfAssign
 export async function saveInteraction(request: SaveInteractionRequest): Promise<void> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     await taskRepo.saveInteraction(
       request.taskId,
       request.targetUserId,
@@ -180,8 +175,7 @@ export async function saveInteraction(request: SaveInteractionRequest): Promise<
 export async function skipUser(taskId: string, targetUserId: string): Promise<void> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     await taskRepo.skipAssignment(taskId, userId, targetUserId);
   } catch (error) {
     console.error("[skipUser] Error:", error);
@@ -195,8 +189,7 @@ export async function skipUser(taskId: string, targetUserId: string): Promise<vo
 export async function createTask(request: SaveTaskRequest): Promise<string> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = session.userId!; // Guaranteed by middleware
     return await taskRepo.createTask(
       userId,
       request.definition,

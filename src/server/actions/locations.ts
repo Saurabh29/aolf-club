@@ -126,8 +126,7 @@ export async function createLocation(
       // Add the creator user to Admin group
       try {
         const session = await getSessionInfo();
-        const userId = session.userId;
-        if (!userId) throw new Error("Not authenticated");
+        const userId = session.userId!; // Guaranteed by middleware
         await addUserToGroup(userId, adminGroup.groupId, { locationId: dbLocation.locationId, groupType: "ADMIN" });
         try {
           // Also create the location ↔ user edges so the user appears in location user lists
@@ -142,7 +141,7 @@ export async function createLocation(
       // If the creator does not yet have an activeLocationId, set this newly created location as their active location.
       try {
         const session = await getSessionInfo();
-        const userId = session.userId;
+        const userId = session.userId!; // Guaranteed by middleware
         if (userId) {
           const userRepo = await import("~/server/db/repositories/user.repository");
           const existing = await userRepo.getUserById(userId);
@@ -203,13 +202,7 @@ export async function getLocations(): Promise<ActionResult<LocationUi[]>> {
   try {
     // Get current user ID
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const userId = session.userId!; // Guaranteed by middleware
     
     // Query for locations the user belongs to (efficient query, no scan)
     const userLocations = await getLocationsForUser(userId);
@@ -341,13 +334,7 @@ export async function getUserLocations(): Promise<ActionResult<{ locations: Arra
 
   try {
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) {
-      return {
-        success: false,
-        error: "Not authenticated"
-      };
-    }
+    const userId = session.userId!; // Guaranteed by middleware
 
     const groups = await getUserGroupsForUser(userId);
     const uniqueLocationIds = Array.from(new Set(groups.map((g) => g.locationId)));
@@ -485,10 +472,7 @@ export async function setActiveLocation(locationId: string | null): Promise<Acti
 
     // Resolve current user and persist the active location
     const session = await getSessionInfo();
-    const userId = session.userId;
-    if (!userId) {
-      return { success: false, error: "Not authenticated" };
-    }
+    const userId = session.userId!; // Guaranteed by middleware
 
     await import("~/server/db/repositories/user.repository").then((m) => m.updateUser(userId, { activeLocationId: locationId ?? undefined }));
 
