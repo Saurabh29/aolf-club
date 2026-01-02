@@ -29,7 +29,7 @@ import {
 } from "~/server/db/repositories/userGroup.repository";
 import { addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { assignRoleToGroup, createRole } from "~/server/db/repositories/permission.repository";
-import { getCurrentUserId } from "./auth"; 
+import { getCurrentUserId } from "~/lib/auth"; 
 import {
   AddLocationFormSchema,
   type AddLocationForm,

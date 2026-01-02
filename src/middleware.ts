@@ -1,5 +1,5 @@
 import { createMiddleware } from "@solidjs/start/middleware";
-import { getAuthSession } from "~/server/actions/auth";
+import { getAuthSession } from "~/lib/auth";
 
 /**
  * Authentication Middleware

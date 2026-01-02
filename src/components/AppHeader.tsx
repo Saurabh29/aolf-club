@@ -16,7 +16,7 @@ import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import type { AuthSession } from "~/lib/schemas/ui";
-import { fetchSession } from "~/lib/auth";
+import { getAuthSession } from "~/lib/auth";
 import { getUserLocations, setActiveLocation } from "~/server/actions/locations";
 
 export default function AppHeader() {
@@ -29,7 +29,7 @@ export default function AppHeader() {
   // Centralized session fetch
   onMount(async () => {
     try {
-      const data = await fetchSession();
+      const data = await getAuthSession();
       setSession(data ?? null);
     } catch (e) {
       console.error("Failed to fetch session:", e);

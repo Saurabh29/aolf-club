@@ -7,11 +7,10 @@
  * All actions return { success: boolean, data?: T, error?: string }
  */
 
-import { getCurrentUserId } from "./auth"; 
-import { getUserById, createUser, updateUser } from "~/server/db/repositories/user.repository";
+import { getCurrentUserId } from "~/lib/auth"; 
+import { getUserById, createUser } from "~/server/db/repositories/user.repository";
 import { getUsersForLocation, addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/userGroup.repository";
-import { getUserGroupById } from "~/server/db/repositories/userGroup.repository";
 import { createEmailIdentity } from "~/server/db/repositories/email.repository";
 import type { GroupType } from "~/lib/schemas/db/types";
 

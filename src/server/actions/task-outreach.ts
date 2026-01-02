@@ -22,8 +22,7 @@ import * as taskRepo from "~/server/db/repositories/task-outreach.repository";
 /**
  * Get current authenticated user ID from session
  */
-import { getCurrentUserId } from "./auth";
-
+import { getCurrentUserId } from "~/lib/auth"; 
 /**
  * Fetch all tasks assigned to the current user
  */
