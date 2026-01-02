@@ -7,7 +7,7 @@
  * All actions return { success: boolean, data?: T, error?: string }
  */
 
-import { getCurrentUserId } from "~/lib/auth"; 
+import { getSessionInfo } from "~/lib/auth"; 
 import { getUserById, createUser } from "~/server/db/repositories/user.repository";
 import { getUsersForLocation, addUserToLocation } from "~/server/db/repositories/userLocation.repository";
 import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/userGroup.repository";
@@ -53,7 +53,14 @@ export async function getUsersForActiveLocation(): Promise<ActionResult<UserWith
 
   try {
     // Get current user to determine active location
-    const currentUserId = await getCurrentUserId();
+    const session = await getSessionInfo();
+    const currentUserId = session.userId;
+    if (!currentUserId) {
+      return {
+        success: false,
+        error: "Not authenticated"
+      };
+    }
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -126,7 +133,14 @@ export async function createUserManual(input: CreateUserInput): Promise<ActionRe
 
   try {
     // Get current user's active location
-    const currentUserId = await getCurrentUserId();
+    const session = await getSessionInfo();
+    const currentUserId = session.userId;
+    if (!currentUserId) {
+      return {
+        success: false,
+        error: "Not authenticated"
+      };
+    }
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -213,7 +227,14 @@ export async function importUsersFromCSV(input: ImportUsersInput): Promise<Actio
 
   try {
     // Get current user's active location
-    const currentUserId = await getCurrentUserId();
+    const session = await getSessionInfo();
+    const currentUserId = session.userId;
+    if (!currentUserId) {
+      return {
+        success: false,
+        error: "Not authenticated"
+      };
+    }
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
@@ -325,7 +346,14 @@ export async function assignUsersToGroup(
 
   try {
     // Get current user's active location
-    const currentUserId = await getCurrentUserId();
+    const session = await getSessionInfo();
+    const currentUserId = session.userId;
+    if (!currentUserId) {
+      return {
+        success: false,
+        error: "Not authenticated"
+      };
+    }
     const currentUser = await getUserById(currentUserId);
 
     if (!currentUser || !currentUser.activeLocationId) {
