@@ -11,12 +11,14 @@
 
 import { Show, createSignal } from "solid-js";
 import { A, createAsync } from "@solidjs/router";
+import { clientOnly } from "@solidjs/start";
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import { getAuthSession } from "~/lib/auth";
 import { getUserLocations, setActiveLocation } from "~/server/actions/locations";
+const AppHeaderAuthClient = clientOnly(() => import("./AppHeaderAuth.client"));
 
 export default function AppHeader() {
   // Use unified getAuthSession - works as both query and direct call
@@ -50,81 +52,7 @@ export default function AppHeader() {
 
         {/* Top-right: Authentication */}
         <div class="flex items-center">
-          <Show when={session()} fallback={
-            <DropdownMenu>
-                <DropdownMenuTrigger as={Button<"button">} variant="outline" size="sm" class="p-2">
-                <Avatar class="h-5 w-5">
-                  <Show when={!session()}>
-                    <UserIcon class="h-4 w-4 text-gray-600" />
-                  </Show>
-                  <AvatarFallback>
-                    <UserIcon class="h-4 w-4 text-gray-600" />
-                  </AvatarFallback>
-                </Avatar>
-                <span class="ml-2 hidden sm:inline">Sign in</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent class="w-48">
-                <div class="px-3 py-2 text-xs text-gray-500">Sign in with</div>
-                  <DropdownMenuGroup>
-                  <DropdownMenuItem as="a" href="/api/auth/signin?provider=google" rel="external" class="flex items-center gap-2">
-                      <img src="/assets/icons/google.svg" alt="Google" class="h-5 w-5" />
-                      <span>Sign in with Google</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem as="a" href="/api/auth/signin?provider=github" rel="external" class="flex items-center gap-2">
-                      <img src="/assets/icons/github.svg" alt="GitHub" class="h-5 w-5" />
-                      <span>Sign in with GitHub</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }>
-            <DropdownMenu onOpenChange={async (open) => {
-              setDropdownOpen(open);
-              if (open && session()) {
-                try {
-                  const resp = await getUserLocations();
-                  if (resp.success) {
-                    const payload: any = resp.data as any;
-                    setUserLocations(payload.locations || []);
-                    const fromSession = (session() as any)?.user?.activeLocationId as string | undefined;
-                    const active = payload.activeLocationId ?? fromSession ?? localStorage.getItem("activeLocationId");
-                    if (active) {
-                      try { localStorage.setItem("activeLocationId", active); } catch (e) {}
-                      setActiveLocationId(active);
-                    }
-                  }
-                } catch (e) {
-                  console.error("Failed to fetch user locations:", e);
-                  setUserLocations([]);
-                }
-              }
-            }}>
-              <DropdownMenuTrigger as={Button<"button">} variant="ghost" size="sm" class="flex items-center gap-2">
-                <Avatar class="h-6 w-6">
-                  <Show when={session()?.user?.image}>
-                    <AvatarImage src={session()!.user!.image!} alt="User avatar" class="h-full w-full object-cover" />
-                  </Show>
-                  <AvatarFallback>{getInitials(session()?.user?.name ?? session()?.user?.email ?? null)}</AvatarFallback>
-                </Avatar>
-                <span class="hidden sm:inline">{session()?.user?.name || session()?.user?.email || "User"}</span>
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent>
-                <DropdownMenuItem as="a" href="/api/auth/signout" rel="external">Sign Out</DropdownMenuItem>
-                <div class="px-3 py-2 text-xs text-gray-500">Locations</div>
-                <div class="divide-y divide-gray-100 max-h-48 overflow-auto">
-                  <Show when={userLocations().length > 0} fallback={<div class="px-4 py-2 text-sm text-gray-600">No locations. <A href="/locations?create=1" class="text-blue-600">Create one</A></div>}>
-                    {userLocations().map((loc) => (
-                      <LocationItem loc={loc} activeId={activeLocationId} setActiveId={setActiveLocationId} isAuthenticated={() => !!session()} closeMenu={setDropdownOpen} />
-                    ))}
-                  </Show>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Show>
+          <AppHeaderAuthClient />
         </div>
       </div>
     </header>

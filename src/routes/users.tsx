@@ -5,16 +5,27 @@
  * Integrated with real DynamoDB data (no dummy data).
  */
 
-import { Show, createSignal, createResource } from "solid-js";
+import { Show, createSignal, createMemo, Suspense, ErrorBoundary } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { UserTable } from "~/components/UserTable";
 import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { createMemo } from "solid-js";
+import { query, createAsync, type RouteDefinition } from "@solidjs/router";
 import { getUsersForActiveLocation, assignUsersToGroup, type UserWithGroup } from "~/server/actions/users";
 import type { GroupType } from "~/lib/schemas/db/types";
+
+const getUsersForActiveLocationQuery = query(async () => {
+  "use server";
+  const result = await getUsersForActiveLocation();
+  if (!result.success) throw new Error(result.error ?? "Failed to fetch users");
+  return result.data;
+}, "users-for-active-location");
+
+export const route = {
+  preload: () => getUsersForActiveLocationQuery(),
+} satisfies RouteDefinition;
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -23,15 +34,16 @@ export default function UserManagement() {
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);
 
-  // Fetch users for active location (no dummy data)
-  const [usersResource, { refetch }] = createResource(async () => {
-    const result = await getUsersForActiveLocation();
-    if (!result.success) {
-      console.error("Failed to load users:", result.error);
-      return [];
+  // Fetch users using SolidStart query + createAsync
+  const usersResource = createAsync(() => getUsersForActiveLocationQuery(), { deferStream: true });
+
+  const refetch = async () => {
+    try {
+      await getUsersForActiveLocationQuery();
+    } catch (e) {
+      // ignore, ErrorBoundary will surface
     }
-    return result.data;
-  });
+  };
 
   const handleAssignToGroup = async (users: UserWithGroup[], groupType: GroupType) => {
     const userIds = users.map((u) => u.userId);
@@ -49,7 +61,7 @@ export default function UserManagement() {
           (errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : "")
         );
       }
-      refetch();
+      await refetch();
     } else {
       alert(`Failed to assign users: ${result.error}`);
     }
@@ -96,18 +108,9 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Show when={usersResource.loading}>
-        <div class="text-center py-8 text-gray-500">Loading users...</div>
-      </Show>
-
-      <Show when={usersResource.error}>
-        <div class="text-center py-8 text-red-600">
-          Error loading users: {String(usersResource.error)}
-        </div>
-      </Show>
-
-      <Show when={!usersResource.loading && usersResource()}>
-        <Tabs defaultValue="members">
+      <ErrorBoundary fallback={<div class="text-center py-8 text-red-600">Error loading users. <Button onClick={() => void refetch()}>Retry</Button></div>}>
+        <Suspense fallback={<div class="text-center py-8 text-gray-500">Loading users...</div>}>
+          <Tabs defaultValue="members">
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>
@@ -120,8 +123,9 @@ export default function UserManagement() {
           <TabsContent value="leads">
             <UserTable users={leads()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
           </TabsContent>
-        </Tabs>
-      </Show>
+          </Tabs>
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

@@ -197,6 +197,10 @@ import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 ```
 
+### Data fetching & mutations
+
+This project follows SolidStart's recommended data patterns. See the repository guidelines in `docs/SOLIDSTART_DATA_GUIDELINES.md` for best practices on `query` + `createAsync` and `"use server"` mutations.
+
 ### Card Wrapper
 
 All content pages must use the reusable `Card` wrapper:

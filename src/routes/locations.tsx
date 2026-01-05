@@ -7,12 +7,25 @@
  * TODO: Add auth check here when authentication is implemented
  */
 
-import { createSignal, createResource, Show, onMount } from "solid-js";
+import { createSignal, Show, onMount, Suspense, ErrorBoundary } from "solid-js";
+import { query, createAsync, type RouteDefinition } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/components/ui/Card";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
 import { getLocations, deleteLocation } from "~/server/actions/locations";
+
+// Server-side query wrapper for locations (SSR-safe, cached)
+const getLocationsQuery = query(async () => {
+  "use server";
+  const result = await getLocations();
+  if (!result.success) throw new Error(result.error ?? "Failed to fetch locations");
+  return result.data;
+}, "locations");
+
+export const route = {
+  preload: () => getLocationsQuery(),
+} satisfies RouteDefinition;
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
 import type { CardAction } from "~/lib/schemas/ui/card.schema";
 import { Pencil, Trash2 } from "lucide-solid";
@@ -33,14 +46,17 @@ export default function LocationsPage() {
     }
   });
 
-  // Fetch locations using SolidJS createResource
-  const [locations, { refetch }] = createResource(async () => {
-    const result = await getLocations();
-    if (!result.success) {
-      throw new Error(result.error);
+  // Fetch locations using SolidStart query + createAsync (SSR-safe and cacheable)
+  const locations = createAsync(() => getLocationsQuery(), { deferStream: true });
+
+  // Helper to refetch the query (re-runs on the server)
+  const refetch = async () => {
+    try {
+      await getLocationsQuery();
+    } catch (e) {
+      // ignore - ErrorBoundary will surface errors
     }
-    return result.data;
-  });
+  };
 
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = createSignal(false);
@@ -51,7 +67,8 @@ export default function LocationsPage() {
    * Refetches the locations list to reflect changes.
    */
   const handleLocationSaved = (_location: LocationUi) => {
-    refetch();
+    // re-run server query to refresh list
+    void refetch();
     setEditingLocation(undefined);
   };
 
@@ -82,7 +99,7 @@ export default function LocationsPage() {
     try {
       const result = await deleteLocation(loc.id);
       if (result.success) {
-        refetch();
+        await refetch();
       } else {
         alert(`Failed to delete location: ${result.error}`);
       }
@@ -127,37 +144,11 @@ export default function LocationsPage() {
         </div>
       </div>
 
-      {/* Loading State */}
-      <Show when={locations.loading}>
-        <div class="py-12 text-center text-gray-500">
-          <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4" />
-          <p>Loading locations...</p>
-        </div>
-      </Show>
-
-      {/* Error State */}
-      <Show when={locations.error}>
-        <Card class="border-red-200 bg-red-50">
-          <CardContent class="pt-6">
-            <p class="text-sm text-red-700">
-              Failed to load locations: {locations.error?.message}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              class="mt-4"
-              onClick={() => refetch()}
-            >
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </Show>
-
-      {/* Data State - Card Grid View */}
-      <Show when={!locations.loading && !locations.error && locations()}>
-        <GenericCardList<LocationUi>
-          items={locations()!}
+      {/* Data + Loading + Error handled via Suspense + ErrorBoundary */}
+      <ErrorBoundary fallback={<Card class="border-red-200 bg-red-50"><CardContent class="pt-6"><p class="text-sm text-red-700">Failed to load locations.</p><Button variant="outline" size="sm" class="mt-4" onClick={() => void refetch()}>Retry</Button></CardContent></Card>}>
+        <Suspense fallback={<div class="py-12 text-center text-gray-500"><div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4" /><p>Loading locations...</p></div>}>
+          <GenericCardList<LocationUi>
+            items={locations() ?? []}
           title={(loc) => loc.name}
           description={(loc) => loc.locationCode}
           renderContent={(loc) => (
@@ -184,7 +175,8 @@ export default function LocationsPage() {
             </Button>
           }
         />
-      </Show>
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Add/Edit Location Dialog - client only */}
       <Show when={isClient()}>
