@@ -21,7 +21,6 @@ import {
   updateLocation as updateLocationRepo,
 } from "~/server/db/repositories/location.repository";
 import { getLocationsForUser } from "~/server/db/repositories/userLocation.repository";
-import { getRequestEvent } from "solid-js/web";
 import { getUserGroupsForUser } from "~/server/db/repositories/userGroup.repository";
 import {
   createUserGroup,

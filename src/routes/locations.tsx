@@ -9,7 +9,6 @@
 
 import { createSignal, Show, onMount, Suspense, ErrorBoundary } from "solid-js";
 import { query, createAsync, type RouteDefinition } from "@solidjs/router";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/components/ui/Card";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
@@ -145,7 +144,20 @@ export default function LocationsPage() {
       </div>
 
       {/* Data + Loading + Error handled via Suspense + ErrorBoundary */}
-      <ErrorBoundary fallback={<Card class="border-red-200 bg-red-50"><CardContent class="pt-6"><p class="text-sm text-red-700">Failed to load locations.</p><Button variant="outline" size="sm" class="mt-4" onClick={() => void refetch()}>Retry</Button></CardContent></Card>}>
+      <ErrorBoundary fallback={
+        <GenericCardList<LocationUi>
+          items={[]}
+          title={() => "Error"}
+          description={() => ""}
+          renderContent={() => (
+            <div class="py-6 text-center">
+              <p class="text-sm text-red-700">Failed to load locations.</p>
+            </div>
+          )}
+          emptyMessage="Failed to load locations"
+          emptyAction={<Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button>}
+        />
+      }>
         <Suspense fallback={<div class="py-12 text-center text-gray-500"><div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4" /><p>Loading locations...</p></div>}>
           <GenericCardList<LocationUi>
             items={locations() ?? []}

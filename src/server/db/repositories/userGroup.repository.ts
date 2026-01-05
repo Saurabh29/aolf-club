@@ -5,7 +5,7 @@
  * Handles ReBAC core: users belong to groups within locations.
  */
 
-import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { ulid } from "ulid";
 import { docClient, TABLE_NAME, Keys, now } from "~/server/db/client";
 import {

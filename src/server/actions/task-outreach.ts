@@ -7,7 +7,6 @@
 
 "use server";
 
-import { redirect } from "@solidjs/router";
 import type {
   OutreachTask,
   OutreachTaskListItem,

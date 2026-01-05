@@ -18,7 +18,6 @@
 
 import {
   GetCommand,
-  PutCommand,
   ScanCommand,
   UpdateCommand,
   TransactWriteCommand,

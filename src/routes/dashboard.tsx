@@ -5,7 +5,6 @@
  * Mobile-first design with responsive grid layout.
  */
 
-import { Show } from "solid-js";
 import { GenericCardList } from "~/components/GenericCardList";
 import { GenericBreakdownCard, type BreakdownItem } from "~/components/GenericBreakdownCard";
 import type { TaskReportSummary } from "~/lib/schemas/ui";

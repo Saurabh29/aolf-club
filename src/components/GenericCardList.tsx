@@ -86,7 +86,7 @@ export function GenericCardList<T extends { id: string }>(
       <Show when={props.items.length > 0}>
         <div class={gridClasses()}>
           <For each={props.items}>
-            {(item, index) => (
+            {(item) => (
               <Card class={props.cardClass}>
                 <CardHeader>
                   <CardTitle>{props.title(item)}</CardTitle>

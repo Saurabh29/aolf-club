@@ -16,13 +16,13 @@
  */
 
 import { Show, createSignal, For, createResource, createMemo } from "solid-js";
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { useSearchParams } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import type { OutreachTaskListItem, AssignedUser } from "~/lib/schemas/ui/task.schema";
+import type { AssignedUser } from "~/lib/schemas/ui/task.schema";
 import { 
   fetchMyTasks,
   fetchTaskById,
@@ -33,7 +33,6 @@ import {
 
 export default function ServeHub() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   
   // Selected task (from query param)
   const selectedTaskId = createMemo(() => searchParams.taskId as string | undefined);

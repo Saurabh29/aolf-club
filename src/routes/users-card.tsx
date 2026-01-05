@@ -5,7 +5,7 @@
  * No permissions logic - simple user display only.
  */
 
-import { Show } from "solid-js";
+// For not needed here
 import { GenericCardList } from "~/components/GenericCardList";
 import { Badge } from "~/components/ui/badge";
 import type { UserListViewModel } from "~/lib/schemas/ui";

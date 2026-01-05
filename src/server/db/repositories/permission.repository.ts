@@ -5,7 +5,7 @@
  * Supports data-driven permission control (no hardcoded logic).
  */
 
-import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ulid } from "ulid";
 import { docClient, TABLE_NAME, Keys, now } from "~/server/db/client";
 import {

@@ -13,10 +13,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import {
   CreateTableCommand,
-  DeleteTableCommand,
   DynamoDBClient,
   ResourceInUseException,
-  ResourceNotFoundException,
 } from "@aws-sdk/client-dynamodb";
 import {
   createLocation,

@@ -263,7 +263,7 @@ export async function importUsersFromCSV(input: ImportUsersInput): Promise<Actio
       try {
         const displayName = findField(row, 'name', 'full_name', 'user_name', 'fullname', 'username', 'display_name');
         const email = findField(row, 'email', 'mail', 'email_id', 'emailaddress', 'email address');
-        const phone = findField(row, 'phone', 'mobile', 'contact', 'phone_number', 'phonenumber');
+        findField(row, 'phone', 'mobile', 'contact', 'phone_number', 'phonenumber');
 
         if (!displayName) {
           failed++;

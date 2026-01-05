@@ -11,15 +11,13 @@
  */
 
 import { Show, createSignal, For, createResource } from "solid-js";
-import { A, useParams, createAsync } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import type {
-  OutreachTask,
-  AssignedUser,
   SelfAssignRequest,
   SaveInteractionRequest,
 } from "~/lib/schemas/ui/task.schema";
@@ -56,7 +54,7 @@ export default function TaskDetail() {
   const [userInputs, setUserInputs] = createSignal<Map<string, any>>(new Map());
 
   // Fetch task data
-  const [task, { refetch: refetchTask }] = createResource(
+  const [task] = createResource(
     () => params.taskId,
     async (taskId) => {
       if (!taskId) throw new Error("Task ID is required");

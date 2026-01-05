@@ -50,10 +50,7 @@ export const UserTable: Component<UserTableProps> = (props) => {
     return props.users.length > 0 && selectedIds().size === props.users.length;
   });
 
-  // Computed: Are some (but not all) users selected?
-  const someSelected = createMemo(() => {
-    return selectedIds().size > 0 && selectedIds().size < props.users.length;
-  });
+  // (someSelected was unused and removed)
 
   // Computed: Get selected user objects
   const selectedUsers = createMemo(() => {

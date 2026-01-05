@@ -5,8 +5,7 @@
  * Integrated with real DynamoDB data (no dummy data).
  */
 
-import { Show, createSignal, createMemo, Suspense, ErrorBoundary } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { createSignal, createMemo, Suspense, ErrorBoundary } from "solid-js";
 import { UserTable } from "~/components/UserTable";
 import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
@@ -28,7 +27,6 @@ export const route = {
 } satisfies RouteDefinition;
 
 export default function UserManagement() {
-  const navigate = useNavigate();
   
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);

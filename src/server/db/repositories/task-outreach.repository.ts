@@ -672,7 +672,7 @@ export async function createTask(
   const now = new Date().toISOString();
 
   // Get location details for locationName
-  const locationResult = await docClient.send(new GetCommand({
+  await docClient.send(new GetCommand({
     TableName: TABLE_NAME,
     Key: {
       PK: `LOCATION#${definition.locationId}`,
@@ -680,10 +680,10 @@ export async function createTask(
     },
   }));
 
-  const locationName = locationResult.Item?.name || "Unknown Location";
+  // locationName not required here
 
   // Get creator name
-  const creatorResult = await docClient.send(new GetCommand({
+  await docClient.send(new GetCommand({
     TableName: TABLE_NAME,
     Key: {
       PK: `USER#${createdBy}`,
@@ -691,7 +691,7 @@ export async function createTask(
     },
   }));
 
-  const createdByName = creatorResult.Item?.name || "Unknown User";
+  // createdByName not required here
 
   // Prepare items for transaction
   const transactItems: any[] = [];
@@ -746,8 +746,6 @@ export async function createTask(
       },
     }));
 
-    const userName = userResult.Item?.name || "Unknown User";
-    const userPhone = userResult.Item?.phone;
     const userType = userResult.Item?.role === "TEACHER" ? "LEAD" : "MEMBER";
 
     transactItems.push({
@@ -770,8 +768,6 @@ export async function createTask(
   if (assignments) {
     for (const assignment of assignments) {
       for (const targetUserId of assignment.targetUserIds) {
-        const assignmentId = ulid();
-
         // Task assignment
         transactItems.push({
           Put: {

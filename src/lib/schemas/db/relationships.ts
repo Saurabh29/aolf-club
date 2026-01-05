@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { UserTypeEnum, GroupTypeEnum, PermissionEnum } from "./types";
+import { UserTypeEnum, GroupTypeEnum } from "./types";
 
 // ============================================================================
 // USER ↔ LOCATION MEMBERSHIP (Bidirectional)

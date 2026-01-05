@@ -11,7 +11,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fetchTasksForActiveLocation, getActiveLocationId } from "~/server/actions/task-outreach";
-import type { OutreachTaskListItem } from "~/lib/schemas/ui/task.schema";
 
 export default function TasksList() {
   // Get active location ID for conditional rendering
