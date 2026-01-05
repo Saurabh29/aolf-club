@@ -5,11 +5,12 @@ import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import { getAuthSession } from "~/lib/auth";
-import { getUserLocations, setActiveLocation } from "~/server/actions/locations";
+import { getUserLocations } from "~/server/actions/locations";
 import { A } from "@solidjs/router";
 
 export default function AppHeaderAuthClient() {
   const session = createAsync(() => getAuthSession());
+  // Local state for dropdown and locations
   const [dropdownOpen, setDropdownOpen] = createSignal(false);
   const [userLocations, setUserLocations] = createSignal<Array<{ id: string; name: string }>>([]);
   const [activeLocationId, setActiveLocationId] = createSignal<string | null>(null);
@@ -70,7 +71,7 @@ export default function AppHeaderAuthClient() {
             }
           }
         }}>
-          <DropdownMenuTrigger as={Button<"button">} variant="ghost" size="sm" class="flex items-center gap-2">
+          <DropdownMenuTrigger as={Button<"button">} variant="ghost" size="sm" class={`flex items-center gap-2 ${dropdownOpen() ? "ring-2 ring-blue-200" : ""}`}>
             <Avatar class="h-6 w-6">
               <Show when={session()?.user?.image}>
                 <AvatarImage src={session()!.user!.image!} alt="User avatar" class="h-full w-full object-cover" />
@@ -83,19 +84,19 @@ export default function AppHeaderAuthClient() {
             </svg>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent>
-            <DropdownMenuItem as="a" href="/api/auth/signout" rel="external">Sign Out</DropdownMenuItem>
-            <div class="px-3 py-2 text-xs text-gray-500">Locations</div>
-            <div class="divide-y divide-gray-100 max-h-48 overflow-auto">
-              <Show when={userLocations().length > 0} fallback={<div class="px-4 py-2 text-sm text-gray-600">No locations. <A href="/locations?create=1" class="text-blue-600">Create one</A></div>}>
-                {userLocations().map((loc) => (
-                  <div class="px-4 py-2 text-sm text-gray-700 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                    <span>{loc.name}</span>
-                  </div>
-                ))}
-              </Show>
-            </div>
-          </DropdownMenuContent>
+            <DropdownMenuContent>
+              <DropdownMenuItem as="a" href="/api/auth/signout" rel="external">Sign Out</DropdownMenuItem>
+              <div class="px-3 py-2 text-xs text-gray-500">Locations</div>
+              <div class="divide-y divide-gray-100 max-h-48 overflow-auto">
+                <Show when={userLocations().length > 0} fallback={<div class="px-4 py-2 text-sm text-gray-600">No locations. <A href="/locations?create=1" class="text-blue-600">Create one</A></div>}>
+                  {userLocations().map((loc) => (
+                    <div class={`px-4 py-2 text-sm text-gray-700 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${activeLocationId() === loc.id ? 'bg-gray-100 font-medium' : ''}`}>
+                      <span>{loc.name}</span>
+                    </div>
+                  ))}
+                </Show>
+              </div>
+            </DropdownMenuContent>
         </DropdownMenu>
       </Show>
     </div>

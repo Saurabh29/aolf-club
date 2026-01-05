@@ -9,7 +9,6 @@ import { Show, createSignal, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
   const [loading, setLoading] = createSignal(true);
   const navigate = useNavigate();
 
@@ -20,15 +19,12 @@ export default function Home() {
       if (resp.ok) {
         const data = await resp.json();
         if (data) {
-          setIsAuthenticated(true);
           navigate("/dashboard", { replace: true });
           return;
         }
       }
-      setIsAuthenticated(false);
     } catch (e) {
       console.error("Auth check failed:", e);
-      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
