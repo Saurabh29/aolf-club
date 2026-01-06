@@ -22,12 +22,12 @@ import type {
   SaveInteractionRequest,
 } from "~/lib/schemas/ui/task.schema";
 import {
-  fetchTask,
-  fetchMyAssignedUsers,
-  fetchUnassignedCount,
-  selfAssign,
-  saveInteraction,
-  skipUser,
+  fetchTaskAction,
+  fetchMyAssignedUsersAction,
+  fetchUnassignedCountAction,
+  selfAssignAction,
+  saveInteractionAction,
+  skipUserAction,
 } from "~/server/api/task-outreach";
 
 // ========== Component ==========
@@ -58,7 +58,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) throw new Error("Task ID is required");
-      const result = await fetchTask(taskId);
+      const result = await fetchTaskAction(taskId);
       if (!result) {
         throw new Error("Task not found");
       }
@@ -71,7 +71,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return [];
-      return await fetchMyAssignedUsers(taskId);
+      return await fetchMyAssignedUsersAction(taskId);
     }
   );
 
@@ -80,7 +80,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return 0;
-      return await fetchUnassignedCount(taskId);
+      return await fetchUnassignedCountAction(taskId);
     }
   );
 
@@ -156,7 +156,7 @@ export default function TaskDetail() {
         followUpAt,
       };
 
-      await saveInteraction(request);
+      await saveInteractionAction(request);
       setSaveStatus("saved");
       
       // Refetch assigned users to show updated state
@@ -176,7 +176,7 @@ export default function TaskDetail() {
         setError("Task ID is missing");
         return;
       }
-      await skipUser(params.taskId, userId);
+      await skipUserAction(params.taskId, userId);
       await refetchAssignedUsers();
     } catch (err: any) {
       setError(err.message || "Failed to skip user");
@@ -195,7 +195,7 @@ export default function TaskDetail() {
         count: assignCount(),
       };
 
-      const result = await selfAssign(request);
+      const result = await selfAssignAction(request);
       
       // Refetch all data
       await Promise.all([refetchAssignedUsers(), refetchUnassignedCount()]);

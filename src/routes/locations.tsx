@@ -12,8 +12,7 @@ import { createAsync, type RouteDefinition } from "@solidjs/router";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
-import { getLocationsQuery } from "~/server/api/locations";
-import { deleteLocation } from "~/server/api/locations";
+import { getLocationsQuery, deleteLocationAction } from "~/server/api/locations";
 
 export const route = {
   preload: () => getLocationsQuery(),
@@ -89,7 +88,7 @@ export default function LocationsPage() {
     }
 
     try {
-      const result = await deleteLocation(loc.id);
+      const result = await deleteLocationAction(loc.id);
       if (result.success) {
         await refetch();
       } else {

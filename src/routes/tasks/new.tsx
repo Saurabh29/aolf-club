@@ -7,14 +7,14 @@
 import { useNavigate } from "@solidjs/router";
 import { TaskForm } from "~/components/TaskForm";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
-import { createTask } from "~/server/api/task-outreach";
+import { createTaskAction } from "~/server/api/task-outreach";
 
 export default function NewTask() {
   const navigate = useNavigate();
 
   const handleSave = async (request: SaveTaskRequest) => {
     try {
-      const taskId = await createTask(request);
+      const taskId = await createTaskAction(request);
       
       // Navigate to the created task detail page
       navigate(`/tasks/${taskId}`);

@@ -1,4 +1,4 @@
-import { query } from "@solidjs/router";
+import { query, action } from "@solidjs/router";
 import type { UserWithGroup } from "~/server/services";
 import type { GroupType } from "~/lib/schemas/db/types";
 
@@ -13,20 +13,20 @@ export const getUsersForActiveLocationQuery = query(async () => {
   return result.data;
 }, "users-for-active-location");
 
-export async function assignUsersToGroup(userIds: string[], groupType: GroupType) {
+export const assignUsersToGroupAction = action(async (userIds: string[], groupType: GroupType) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.assignUsersToGroup(userIds, groupType);
-}
+}, "assign-users-to-group");
 
-export async function createUserManual(input: any) {
+export const createUserManualAction = action(async (input: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.createUserManual(input);
-}
+}, "create-user-manual");
 
-export async function importUsersFromCSV(input: any) {
+export const importUsersFromCSVAction = action(async (input: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.importUsersFromCSV(input);
-}
+}, "import-users-from-csv");

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { createUserManual } from "~/server/api/users";
+import { createUserManualAction } from "~/server/api/users";
 
 export interface AddUserDialogProps {
   open: boolean;
@@ -26,7 +26,7 @@ export const AddUserDialog: Component<AddUserDialogProps> = (props) => {
     setError(null);
 
     try {
-      const result = await createUserManual({
+      const result = await createUserManualAction({
         displayName: displayName(),
         email: email() || undefined,
         phone: phone() || undefined,

@@ -24,7 +24,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { GooglePlaceSearch, type PlaceDetails } from "~/components/GooglePlaceSearch";
-import { createLocation, updateLocation } from "~/server/api/locations";
+import { createLocationAction, updateLocationAction } from "~/server/api/locations";
 import { sanitizeLocationCode } from "~/lib/schemas/ui/location.schema";
 import type { AddLocationForm } from "~/lib/schemas/ui/location.schema";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
@@ -167,7 +167,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
           updatePayload.addressComponents = currentPlace.addressComponents;
         }
 
-        const result = await updateLocation(props.editLocation!.id, updatePayload);
+        const result = await updateLocationAction(props.editLocation!.id, updatePayload);
 
         if (!result.success) {
           setError(result.error);
@@ -188,7 +188,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
           status: "active",
         };
 
-        const result = await createLocation(formData);
+        const result = await createLocationAction(formData);
 
         if (!result.success) {
           setError(result.error);

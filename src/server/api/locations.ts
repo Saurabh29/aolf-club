@@ -1,4 +1,4 @@
-import { query } from "@solidjs/router";
+import { query, action } from "@solidjs/router";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
 
 export type { LocationUi };
@@ -27,26 +27,26 @@ export const getLocationByIdQuery = query(async (locationId: string) => {
   return result.data;
 }, "location-by-id");
 
-export async function setActiveLocation(locationId: string | null) {
+export const setActiveLocationAction = action(async (locationId: string | null) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.setActiveLocation(locationId);
-}
+}, "set-active-location");
 
-export async function createLocation(formData: any) {
+export const createLocationAction = action(async (formData: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.createLocation(formData);
-}
+}, "create-location");
 
-export async function updateLocation(locationId: string, updates: any) {
+export const updateLocationAction = action(async (locationId: string, updates: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.updateLocation(locationId, updates);
-}
+}, "update-location");
 
-export async function deleteLocation(locationId: string) {
+export const deleteLocationAction = action(async (locationId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.deleteLocation(locationId);
-}
+}, "delete-location");

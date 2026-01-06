@@ -12,7 +12,7 @@ import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { createAsync, type RouteDefinition } from "@solidjs/router";
-import { getUsersForActiveLocationQuery, assignUsersToGroup } from "~/server/api/users";
+import { getUsersForActiveLocationQuery, assignUsersToGroupAction } from "~/server/api/users";
 import type { UserWithGroup } from "~/server/api/users";
 import type { GroupType } from "~/lib/schemas/db/types";
 
@@ -39,7 +39,7 @@ export default function UserManagement() {
 
   const handleAssignToGroup = async (users: UserWithGroup[], groupType: GroupType) => {
     const userIds = users.map((u) => u.userId);
-    const result = await assignUsersToGroup(userIds, groupType);
+    const result = await assignUsersToGroupAction(userIds, groupType);
     
     if (result.success) {
       const { assigned, failed, errors } = result.data;

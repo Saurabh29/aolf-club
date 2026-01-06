@@ -2,7 +2,7 @@ import { createSignal, Show, type Component } from "solid-js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { importUsersFromCSV } from "~/server/api/users";
+import { importUsersFromCSVAction } from "~/server/api/users";
 
 export interface ImportUsersDialogProps {
   open: boolean;
@@ -48,7 +48,7 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
     setResult(null);
 
     try {
-      const importResult = await importUsersFromCSV({
+      const importResult = await importUsersFromCSVAction({
         csvData: csvContent(),
       });
 

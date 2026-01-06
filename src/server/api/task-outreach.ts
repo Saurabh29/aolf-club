@@ -1,4 +1,4 @@
-import { query } from "@solidjs/router";
+import { query, action } from "@solidjs/router";
 
 export const fetchMyTasksQuery = query(async () => {
   "use server";
@@ -18,56 +18,50 @@ export const getActiveLocationIdQuery = query(async () => {
   return await svc.getActiveLocationId();
 }, "active-location-id");
 
-export async function fetchTaskById(taskId: string) {
+export const fetchTaskByIdAction = action(async (taskId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.fetchTaskById(taskId);
-}
+}, "fetch-task-by-id");
 
-export async function createTask(request: any) {
+export const createTaskAction = action(async (request: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.createTask(request);
-}
+}, "create-task");
 
-export async function fetchTask(taskId: string) {
+export const fetchTaskAction = action(async (taskId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.fetchTask(taskId);
-}
+}, "fetch-task");
 
-export async function fetchMyAssignedUsers(taskId: string) {
+export const fetchMyAssignedUsersAction = action(async (taskId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.fetchMyAssignedUsers(taskId);
-}
+}, "fetch-my-assigned-users");
 
-export async function fetchUnassignedCount(taskId: string) {
+export const fetchUnassignedCountAction = action(async (taskId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.fetchUnassignedCount(taskId);
-}
+}, "fetch-unassigned-count");
 
-export async function selfAssign(request: any) {
+export const selfAssignAction = action(async (request: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.selfAssign(request);
-}
+}, "self-assign");
 
-export async function saveInteraction(request: any) {
+export const saveInteractionAction = action(async (request: any) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.saveInteraction(request);
-}
+}, "save-interaction");
 
-export async function skipUser(taskId: string, targetUserId: string) {
+export const skipUserAction = action(async (taskId: string, targetUserId: string) => {
   "use server";
   const svc = await import("~/server/services");
   return await svc.skipUser(taskId, targetUserId);
-}
-
-export async function fetchMyTasks() {
-  "use server";
-  const svc = await import("~/server/services");
-  return await svc.fetchMyTasks();
-}
+}, "skip-user");

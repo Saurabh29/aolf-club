@@ -24,11 +24,11 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import type { AssignedUser } from "~/lib/schemas/ui/task.schema";
 import { 
-  fetchMyTasks,
-  fetchTaskById,
-  fetchMyAssignedUsers,
-  saveInteraction,
-  skipUser
+  fetchMyTasksQuery,
+  fetchTaskByIdAction,
+  fetchMyAssignedUsersAction,
+  saveInteractionAction,
+  skipUserAction
 } from "~/server/api/task-outreach";
 
 export default function ServeHub() {
@@ -39,19 +39,19 @@ export default function ServeHub() {
   
   // Fetch my assigned tasks
   const [tasks] = createResource(async () => {
-    return await fetchMyTasks();
+    return await fetchMyTasksQuery();
   });
   
   // Fetch task details when task is selected
   const [taskDetails] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    return await fetchTaskById(taskId);
+    return await fetchTaskByIdAction(taskId);
   });
   
   // Fetch assigned users for selected task
   const [assignedUsers, { refetch: refetchUsers }] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    return await fetchMyAssignedUsers(taskId);
+    return await fetchMyAssignedUsersAction(taskId);
   });
   
   // Local state for interactions (before save)
@@ -85,7 +85,7 @@ export default function ServeHub() {
       const userInteraction = interactions()[user.targetUserId] || {};
       const existingInteraction = user.interaction;
       
-      await saveInteraction({
+      await saveInteractionAction({
         taskId: selectedTaskId()!,
         targetUserId: user.targetUserId,
         actionsTaken: {
@@ -119,7 +119,7 @@ export default function ServeHub() {
     if (!confirm(`Skip ${user.name}? This will remove them from your list.`)) return;
     
     try {
-      await skipUser(selectedTaskId()!, user.targetUserId);
+      await skipUserAction(selectedTaskId()!, user.targetUserId);
       await refetchUsers();
     } catch (error: any) {
       console.error("Failed to skip:", error);
