@@ -14,10 +14,14 @@ export default function NewTask() {
 
   const handleSave = async (request: SaveTaskRequest) => {
     try {
-      const taskId = await createTaskAction(request);
+      const result = await createTaskAction(request);
+      if (!result.success) {
+        alert(`Failed to create task: ${result.error}`);
+        return;
+      }
       
       // Navigate to the created task detail page
-      navigate(`/tasks/${taskId}`);
+      navigate(`/tasks/${result.data}`);
     } catch (error: any) {
       console.error("Failed to create task:", error);
       alert(`Failed to create task: ${error.message || "Unknown error"}`);

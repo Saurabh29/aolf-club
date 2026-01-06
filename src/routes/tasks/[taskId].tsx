@@ -59,10 +59,13 @@ export default function TaskDetail() {
     async (taskId) => {
       if (!taskId) throw new Error("Task ID is required");
       const result = await fetchTaskAction(taskId);
-      if (!result) {
+      if (!result.success) {
+        throw new Error(result.error ?? "Failed to fetch task");
+      }
+      if (!result.data) {
         throw new Error("Task not found");
       }
-      return result;
+      return result.data;
     }
   );
 
@@ -71,7 +74,12 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return [];
-      return await fetchMyAssignedUsersAction(taskId);
+      const result = await fetchMyAssignedUsersAction(taskId);
+      if (!result.success) {
+        console.error("Failed to fetch assigned users:", result.error);
+        return [];
+      }
+      return result.data;
     }
   );
 
@@ -80,7 +88,12 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return 0;
-      return await fetchUnassignedCountAction(taskId);
+      const result = await fetchUnassignedCountAction(taskId);
+      if (!result.success) {
+        console.error("Failed to fetch unassigned count:", result.error);
+        return 0;
+      }
+      return result.data;
     }
   );
 
@@ -156,7 +169,12 @@ export default function TaskDetail() {
         followUpAt,
       };
 
-      await saveInteractionAction(request);
+      const result = await saveInteractionAction(request);
+      if (!result.success) {
+        setError(result.error ?? "Failed to save interaction");
+        setSaveStatus(null);
+        return;
+      }
       setSaveStatus("saved");
       
       // Refetch assigned users to show updated state
@@ -176,7 +194,11 @@ export default function TaskDetail() {
         setError("Task ID is missing");
         return;
       }
-      await skipUserAction(params.taskId, userId);
+      const result = await skipUserAction(params.taskId, userId);
+      if (!result.success) {
+        setError(result.error ?? "Failed to skip user");
+        return;
+      }
       await refetchAssignedUsers();
     } catch (err: any) {
       setError(err.message || "Failed to skip user");
@@ -196,12 +218,16 @@ export default function TaskDetail() {
       };
 
       const result = await selfAssignAction(request);
+      if (!result.success) {
+        setError(result.error ?? "Failed to assign users");
+        return;
+      }
       
       // Refetch all data
       await Promise.all([refetchAssignedUsers(), refetchUnassignedCount()]);
       
       // Show success message
-      alert(result.message);
+      alert(result.data.message);
     } catch (err: any) {
       setError(err.message || "Failed to assign users");
     }

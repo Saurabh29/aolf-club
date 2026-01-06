@@ -45,13 +45,23 @@ export default function ServeHub() {
   // Fetch task details when task is selected
   const [taskDetails] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    return await fetchTaskByIdAction(taskId);
+    const result = await fetchTaskByIdAction(taskId);
+    if (!result.success) {
+      console.error("Failed to fetch task:", result.error);
+      return null;
+    }
+    return result.data;
   });
   
   // Fetch assigned users for selected task
   const [assignedUsers, { refetch: refetchUsers }] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    return await fetchMyAssignedUsersAction(taskId);
+    const result = await fetchMyAssignedUsersAction(taskId);
+    if (!result.success) {
+      console.error("Failed to fetch assigned users:", result.error);
+      return null;
+    }
+    return result.data;
   });
   
   // Local state for interactions (before save)
@@ -85,7 +95,7 @@ export default function ServeHub() {
       const userInteraction = interactions()[user.targetUserId] || {};
       const existingInteraction = user.interaction;
       
-      await saveInteractionAction({
+      const result = await saveInteractionAction({
         taskId: selectedTaskId()!,
         targetUserId: user.targetUserId,
         actionsTaken: {
@@ -96,6 +106,11 @@ export default function ServeHub() {
         rating: userInteraction.rating ?? existingInteraction?.rating,
         followUpAt: userInteraction.followUpAt ?? existingInteraction?.followUpAt,
       });
+      
+      if (!result.success) {
+        alert(`Failed to save: ${result.error}`);
+        return;
+      }
       
       // Refetch to show updated state
       await refetchUsers();

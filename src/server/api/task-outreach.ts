@@ -3,19 +3,25 @@ import { query, action } from "@solidjs/router";
 export const fetchMyTasksQuery = query(async () => {
   "use server";
   const svc = await import("~/server/services");
-  return await svc.fetchMyTasks();
+  const result = await svc.fetchMyTasks();
+  if (!result.success) throw new Error(result.error ?? "Failed to fetch tasks");
+  return result.data;
 }, "tasks-my");
 
 export const fetchTasksForActiveLocationQuery = query(async () => {
   "use server";
   const svc = await import("~/server/services");
-  return await svc.fetchTasksForActiveLocation();
+  const result = await svc.fetchTasksForActiveLocation();
+  if (!result.success) throw new Error(result.error ?? "Failed to fetch tasks");
+  return result.data;
 }, "tasks-active-location");
 
 export const getActiveLocationIdQuery = query(async () => {
   "use server";
   const svc = await import("~/server/services");
-  return await svc.getActiveLocationId();
+  const result = await svc.getActiveLocationId();
+  if (!result.success) throw new Error(result.error ?? "Failed to get location");
+  return result.data;
 }, "active-location-id");
 
 export const fetchTaskByIdAction = action(async (taskId: string) => {

@@ -121,7 +121,84 @@ export const createLocationAction = action(async (formData: any) => {
 1. **Client Safety**: API wrappers use dynamic imports inside `"use server"` functions, preventing server-only code (env vars, DB clients) from being bundled into client code
 2. **SolidStart Patterns**: Follows official SolidStart patterns for data fetching and mutations
 3. **Type Safety**: All queries/actions are fully typed
-4. **Clear Separation**: 
+4. **Consistent Error Handling**: All services return `ActionResult<T>` for uniform success/error handling
+   - **Queries**: Unwrap ActionResult and throw on error (SolidStart handles via ErrorBoundary)
+   - **Actions**: Return ActionResult directly for UI to check `result.success` and handle `result.error`
+5. **Clear Separation**: 
    - `src/server/api/*` = thin wrappers for client consumption
    - `src/server/services/*` = business logic and DB operations
-5. **Preload Support**: Query wrappers can be used with `preload` for optimistic data fetching
+6. **Preload Support**: Query wrappers can be used with `preload` for optimistic data fetching
+
+## Error Handling Pattern
+
+### Services Layer (`src/server/services/*`)
+
+All service functions return `ActionResult<T>`:
+
+```typescript
+type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+```
+
+Example:
+```typescript
+export async function createLocation(formData: AddLocationForm): Promise<ActionResult<LocationUi>> {
+  try {
+    // validation & business logic
+    const location = await createLocationRepo(data);
+    return { success: true, data: toUiLocation(location) };
+  } catch (error) {
+    console.error("[createLocation] Error:", error);
+    return { success: false, error: "Failed to create location" };
+  }
+}
+```
+
+### API Layer (`src/server/api/*`)
+
+**Queries** unwrap ActionResult and throw on error:
+```typescript
+export const getLocationsQuery = query(async () => {
+  "use server";
+  const svc = await import("~/server/services");
+  const result = await svc.getLocations();
+  if (!result.success) throw new Error(result.error ?? "Failed to fetch locations");
+  return result.data; // Returns unwrapped data
+}, "locations-for-user");
+```
+
+**Actions** return ActionResult directly:
+```typescript
+export const createLocationAction = action(async (formData: any) => {
+  "use server";
+  const svc = await import("~/server/services");
+  return await svc.createLocation(formData); // Returns ActionResult<LocationUi>
+}, "create-location");
+```
+
+### UI Layer (Routes/Components)
+
+**With Queries** - errors are thrown and handled by ErrorBoundary:
+```tsx
+const locations = createAsync(() => getLocationsQuery());
+// If query fails, ErrorBoundary will catch the error
+```
+
+**With Actions** - check `result.success`:
+```tsx
+const result = await createLocationAction(formData);
+if (result.success) {
+  // Handle success: result.data contains the created location
+  alert("Location created successfully!");
+} else {
+  // Handle error: result.error contains the error message
+  alert(`Failed: ${result.error}`);
+}
+```
+
+This pattern ensures:
+- **Queries**: Fail fast with ErrorBoundary (user-friendly error pages)
+- **Actions**: Inline error handling (form validation, user feedback)
+- **Consistency**: All services use the same ActionResult pattern
+- **Type Safety**: TypeScript ensures correct error handling at compile time
