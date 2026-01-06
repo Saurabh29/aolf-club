@@ -5,7 +5,7 @@ import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import { getAuthSession } from "~/lib/auth";
-import { getUserLocations } from "~/server/services";
+import { getUserLocationsQuery } from "~/server/api/locations";
 import { A } from "@solidjs/router";
 
 export default function AppHeaderAuthClient() {
@@ -54,16 +54,14 @@ export default function AppHeaderAuthClient() {
           setDropdownOpen(open);
           if (open && session()) {
             try {
-              const resp = await getUserLocations();
-              if (resp.success) {
-                const payload: any = resp.data as any;
-                setUserLocations(payload.locations || []);
-                const fromSession = (session() as any)?.user?.activeLocationId as string | undefined;
-                const active = payload.activeLocationId ?? fromSession ?? localStorage.getItem("activeLocationId");
-                if (active) {
-                  try { localStorage.setItem("activeLocationId", active); } catch (e) {}
-                  setActiveLocationId(active);
-                }
+              const payload = await getUserLocationsQuery();
+              // payload should be the resolved data shape from the query
+              setUserLocations(payload.locations || []);
+              const fromSession = (session() as any)?.user?.activeLocationId as string | undefined;
+              const active = payload.activeLocationId ?? fromSession ?? localStorage.getItem("activeLocationId");
+              if (active) {
+                try { localStorage.setItem("activeLocationId", active); } catch (e) {}
+                setActiveLocationId(active);
               }
             } catch (e) {
               console.error("Failed to fetch user locations:", e);

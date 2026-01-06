@@ -7,7 +7,7 @@
 import { useNavigate } from "@solidjs/router";
 import { TaskForm } from "~/components/TaskForm";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
-import { createTask } from "~/server/services";
+import { createTask } from "~/server/api/task-outreach";
 
 export default function NewTask() {
   const navigate = useNavigate();

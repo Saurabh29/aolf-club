@@ -28,7 +28,7 @@ import {
   selfAssign,
   saveInteraction,
   skipUser,
-} from "~/server/services";
+} from "~/server/api/task-outreach";
 
 // ========== Component ==========
 

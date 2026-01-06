@@ -13,7 +13,7 @@ import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { createAsync, type RouteDefinition } from "@solidjs/router";
 import { getUsersForActiveLocationQuery, assignUsersToGroup } from "~/server/api/users";
-import type { UserWithGroup } from "~/server/services";
+import type { UserWithGroup } from "~/server/api/users";
 import type { GroupType } from "~/lib/schemas/db/types";
 
 export const route = {

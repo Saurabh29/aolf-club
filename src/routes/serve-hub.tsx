@@ -29,7 +29,7 @@ import {
   fetchMyAssignedUsers,
   saveInteraction,
   skipUser
-} from "~/server/services";
+} from "~/server/api/task-outreach";
 
 export default function ServeHub() {
   const [searchParams, setSearchParams] = useSearchParams();
