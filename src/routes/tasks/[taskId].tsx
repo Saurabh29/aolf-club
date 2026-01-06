@@ -28,7 +28,7 @@ import {
   selfAssign,
   saveInteraction,
   skipUser,
-} from "~/server/actions/task-outreach";
+} from "~/server/services";
 
 // ========== Component ==========
 
@@ -130,7 +130,7 @@ export default function TaskDetail() {
       setError(null);
 
       // Find the user from assigned users
-      const user = assignedUsers()?.find(u => u.targetUserId === userId);
+      const user = assignedUsers()?.find((u: any) => u.targetUserId === userId);
       if (!user) {
         setError("User not found in assignments");
         return;

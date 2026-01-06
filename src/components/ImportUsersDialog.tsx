@@ -2,7 +2,7 @@ import { createSignal, Show, type Component } from "solid-js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { importUsersFromCSV } from "~/server/actions/users";
+import { importUsersFromCSV } from "~/server/services";
 
 export interface ImportUsersDialogProps {
   open: boolean;

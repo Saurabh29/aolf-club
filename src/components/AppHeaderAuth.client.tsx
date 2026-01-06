@@ -5,7 +5,7 @@ import { User as UserIcon } from "lucide-solid";
 import { Button } from "~/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from "~/components/ui/dropdown-menu";
 import { getAuthSession } from "~/lib/auth";
-import { getUserLocations } from "~/server/actions/locations";
+import { getUserLocations } from "~/server/services";
 import { A } from "@solidjs/router";
 
 export default function AppHeaderAuthClient() {

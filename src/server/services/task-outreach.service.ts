@@ -1,11 +1,6 @@
 /**
- * Task Outreach Server Actions
- * 
- * Server-side functions for task-based outreach UI.
- * Called from SolidStart routes using "use server".
+ * Task outreach service layer (migrated from server/actions/task-outreach.ts)
  */
-
-"use server";
 
 import type {
   OutreachTask,
@@ -17,20 +12,12 @@ import type {
 } from "~/lib/schemas/ui/task.schema";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
 import * as taskRepo from "~/server/db/repositories/task-outreach.repository";
+import { getSessionInfo } from "~/lib/auth";
 
-/**
- * Get current authenticated user ID from session
- */
-import { getSessionInfo } from "~/lib/auth"; 
-/**
- * Fetch all tasks assigned to the current user
- */
 export async function fetchMyTasks(): Promise<OutreachTaskListItem[]> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
-    // Query USER#userId + SK begins_with TASKASSIGNMENT#
-    // Then join with TASK items to get full details
+    const userId = session.userId!;
     return await taskRepo.getTasksAssignedToUser(userId);
   } catch (error) {
     console.error("[fetchMyTasks] Error:", error);
@@ -38,18 +25,11 @@ export async function fetchMyTasks(): Promise<OutreachTaskListItem[]> {
   }
 }
 
-/**
- * Fetch tasks for the current user's active location
- */
 export async function fetchTasksForActiveLocation(): Promise<OutreachTaskListItem[]> {
   try {
     const session = await getSessionInfo();
     const locationId = session.activeLocationId;
-    
-    if (!locationId) {
-      return []; // No active location set
-    }
-    
+    if (!locationId) return [];
     return await taskRepo.getTasksByLocation(locationId);
   } catch (error) {
     console.error("[fetchTasksForActiveLocation] Error:", error);
@@ -57,9 +37,6 @@ export async function fetchTasksForActiveLocation(): Promise<OutreachTaskListIte
   }
 }
 
-/**
- * Get the current user's active location ID (for UI conditional rendering)
- */
 export async function getActiveLocationId(): Promise<string | null> {
   try {
     const session = await getSessionInfo();
@@ -70,9 +47,6 @@ export async function getActiveLocationId(): Promise<string | null> {
   }
 }
 
-/**
- * Fetch task details by taskId (alias for fetchTask)
- */
 export async function fetchTaskById(taskId: string): Promise<OutreachTask | null> {
   try {
     return await taskRepo.getTaskById(taskId);
@@ -82,9 +56,6 @@ export async function fetchTaskById(taskId: string): Promise<OutreachTask | null
   }
 }
 
-/**
- * Fetch task details by taskId
- */
 export async function fetchTask(taskId: string): Promise<OutreachTask | null> {
   try {
     return await taskRepo.getTaskById(taskId);
@@ -94,9 +65,6 @@ export async function fetchTask(taskId: string): Promise<OutreachTask | null> {
   }
 }
 
-/**
- * Fetch tasks for a location
- */
 export async function fetchTasksByLocation(locationId: string): Promise<OutreachTaskListItem[]> {
   try {
     return await taskRepo.getTasksByLocation(locationId);
@@ -106,13 +74,10 @@ export async function fetchTasksByLocation(locationId: string): Promise<Outreach
   }
 }
 
-/**
- * Fetch assigned users for current user in a task
- */
 export async function fetchMyAssignedUsers(taskId: string): Promise<AssignedUser[]> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
+    const userId = session.userId!;
     return await taskRepo.getAssignedUsersWithInteractions(taskId, userId);
   } catch (error) {
     console.error("[fetchMyAssignedUsers] Error:", error);
@@ -120,9 +85,6 @@ export async function fetchMyAssignedUsers(taskId: string): Promise<AssignedUser
   }
 }
 
-/**
- * Get unassigned user count for a task
- */
 export async function fetchUnassignedCount(taskId: string): Promise<number> {
   try {
     return await taskRepo.getUnassignedCount(taskId);
@@ -132,13 +94,10 @@ export async function fetchUnassignedCount(taskId: string): Promise<number> {
   }
 }
 
-/**
- * Self-assign users atomically with retry logic
- */
 export async function selfAssign(request: SelfAssignRequest): Promise<SelfAssignResult> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
+    const userId = session.userId!;
     return await taskRepo.selfAssignUsers(request.taskId, userId, request.count);
   } catch (error: any) {
     console.error("[selfAssign] Error:", error);
@@ -146,13 +105,10 @@ export async function selfAssign(request: SelfAssignRequest): Promise<SelfAssign
   }
 }
 
-/**
- * Save interaction state for a target user
- */
 export async function saveInteraction(request: SaveInteractionRequest): Promise<void> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
+    const userId = session.userId!;
     await taskRepo.saveInteraction(
       request.taskId,
       request.targetUserId,
@@ -168,13 +124,10 @@ export async function saveInteraction(request: SaveInteractionRequest): Promise<
   }
 }
 
-/**
- * Mark assignment as skipped
- */
 export async function skipUser(taskId: string, targetUserId: string): Promise<void> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
+    const userId = session.userId!;
     await taskRepo.skipAssignment(taskId, userId, targetUserId);
   } catch (error) {
     console.error("[skipUser] Error:", error);
@@ -182,13 +135,10 @@ export async function skipUser(taskId: string, targetUserId: string): Promise<vo
   }
 }
 
-/**
- * Create a new outreach task
- */
 export async function createTask(request: SaveTaskRequest): Promise<string> {
   try {
     const session = await getSessionInfo();
-    const userId = session.userId!; // Guaranteed by middleware
+    const userId = session.userId!;
     return await taskRepo.createTask(
       userId,
       request.definition,

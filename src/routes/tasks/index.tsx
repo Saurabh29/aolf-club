@@ -10,17 +10,17 @@ import { A } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { fetchTasksForActiveLocation, getActiveLocationId } from "~/server/actions/task-outreach";
+import { fetchTasksForActiveLocationQuery, getActiveLocationIdQuery } from "~/server/api/task-outreach";
 
 export default function TasksList() {
   // Get active location ID for conditional rendering
   const [activeLocationId] = createResource(async () => {
-    return await getActiveLocationId();
+    return await getActiveLocationIdQuery();
   });
 
   // Get tasks for the active location
   const [tasks] = createResource(async () => {
-    return await fetchTasksForActiveLocation();
+    return await fetchTasksForActiveLocationQuery();
   });
 
   const getStatusVariant = (status: string) => {

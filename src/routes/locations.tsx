@@ -8,19 +8,12 @@
  */
 
 import { createSignal, Show, onMount, Suspense, ErrorBoundary } from "solid-js";
-import { query, createAsync, type RouteDefinition } from "@solidjs/router";
+import { createAsync, type RouteDefinition } from "@solidjs/router";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
-import { getLocations, deleteLocation } from "~/server/actions/locations";
-
-// Server-side query wrapper for locations (SSR-safe, cached)
-const getLocationsQuery = query(async () => {
-  "use server";
-  const result = await getLocations();
-  if (!result.success) throw new Error(result.error ?? "Failed to fetch locations");
-  return result.data;
-}, "locations");
+import { getLocationsQuery } from "~/server/api/locations";
+import { deleteLocation } from "~/server/services";
 
 export const route = {
   preload: () => getLocationsQuery(),

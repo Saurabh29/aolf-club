@@ -11,16 +11,10 @@ import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { query, createAsync, type RouteDefinition } from "@solidjs/router";
-import { getUsersForActiveLocation, assignUsersToGroup, type UserWithGroup } from "~/server/actions/users";
+import { createAsync, type RouteDefinition } from "@solidjs/router";
+import { getUsersForActiveLocationQuery, assignUsersToGroup } from "~/server/api/users";
+import type { UserWithGroup } from "~/server/services";
 import type { GroupType } from "~/lib/schemas/db/types";
-
-const getUsersForActiveLocationQuery = query(async () => {
-  "use server";
-  const result = await getUsersForActiveLocation();
-  if (!result.success) throw new Error(result.error ?? "Failed to fetch users");
-  return result.data;
-}, "users-for-active-location");
 
 export const route = {
   preload: () => getUsersForActiveLocationQuery(),
@@ -33,7 +27,7 @@ export default function UserManagement() {
   const [showImportUsers, setShowImportUsers] = createSignal(false);
 
   // Fetch users using SolidStart query + createAsync
-  const usersResource = createAsync(() => getUsersForActiveLocationQuery(), { deferStream: true });
+  const usersResource = createAsync<UserWithGroup[] | undefined>(() => getUsersForActiveLocationQuery(), { deferStream: true });
 
   const refetch = async () => {
     try {

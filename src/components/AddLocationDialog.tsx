@@ -24,7 +24,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { GooglePlaceSearch, type PlaceDetails } from "~/components/GooglePlaceSearch";
-import { createLocation, updateLocation } from "~/server/actions/locations";
+import { createLocation, updateLocation } from "~/server/services";
 import { sanitizeLocationCode } from "~/lib/schemas/ui/location.schema";
 import type { AddLocationForm } from "~/lib/schemas/ui/location.schema";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";

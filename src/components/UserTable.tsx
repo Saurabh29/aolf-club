@@ -28,7 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "~/components/ui/dropdown-menu";
-import type { UserWithGroup } from "~/server/actions/users";
+import type { UserWithGroup } from "~/server/services";
 
 export interface UserTableProps {
   users: UserWithGroup[];
