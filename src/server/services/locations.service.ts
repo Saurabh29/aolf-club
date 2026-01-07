@@ -24,7 +24,7 @@ import {
   type LocationUi,
 } from "~/lib/schemas/ui/location.schema";
 import type { Location } from "~/lib/schemas/db/location.schema";
-import type { ActionResult } from "./types";
+import type { ApiResult } from "~/lib/types";
 
 function toUiLocation(dbLocation: Location): LocationUi {
   return {
@@ -35,7 +35,7 @@ function toUiLocation(dbLocation: Location): LocationUi {
 
 export async function createLocation(
   formData: AddLocationForm
-): Promise<ActionResult<LocationUi>> {
+): Promise<ApiResult<LocationUi>> {
   try {
     const validatedData = AddLocationFormSchema.parse(formData);
 
@@ -137,7 +137,7 @@ export async function createLocation(
   }
 }
 
-export async function getLocations(): Promise<ActionResult<LocationUi[]>> {
+export async function getLocations(): Promise<ApiResult<LocationUi[]>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -153,7 +153,7 @@ export async function getLocations(): Promise<ActionResult<LocationUi[]>> {
   }
 }
 
-export async function getLocationById(locationId: string): Promise<ActionResult<LocationUi>> {
+export async function getLocationById(locationId: string): Promise<ApiResult<LocationUi>> {
   try {
     if (!locationId || !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
       return { success: false, error: "Invalid location ID format" };
@@ -167,7 +167,7 @@ export async function getLocationById(locationId: string): Promise<ActionResult<
   }
 }
 
-export async function getLocationByCode(locationCode: string): Promise<ActionResult<LocationUi>> {
+export async function getLocationByCode(locationCode: string): Promise<ApiResult<LocationUi>> {
   try {
     if (!locationCode || !/^[a-z0-9-]{6,50}$/.test(locationCode)) {
       return { success: false, error: "Invalid location code format" };
@@ -181,7 +181,7 @@ export async function getLocationByCode(locationCode: string): Promise<ActionRes
   }
 }
 
-export async function getUserLocations(): Promise<ActionResult<{ locations: Array<{ id: string; name: string }>; activeLocationId?: string }>> {
+export async function getUserLocations(): Promise<ApiResult<{ locations: Array<{ id: string; name: string }>; activeLocationId?: string }>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -204,7 +204,7 @@ export async function getUserLocations(): Promise<ActionResult<{ locations: Arra
   }
 }
 
-export async function deleteLocation(locationId: string): Promise<ActionResult<{ deleted: true }>> {
+export async function deleteLocation(locationId: string): Promise<ApiResult<{ deleted: true }>> {
   try {
     if (!locationId || !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
       return { success: false, error: "Invalid location ID format" };
@@ -217,7 +217,7 @@ export async function deleteLocation(locationId: string): Promise<ActionResult<{
   }
 }
 
-export async function updateLocation(locationId: string, updates: { name?: string; placeId?: string; formattedAddress?: string; lat?: number; lng?: number; addressComponents?: any }): Promise<ActionResult<LocationUi>> {
+export async function updateLocation(locationId: string, updates: { name?: string; placeId?: string; formattedAddress?: string; lat?: number; lng?: number; addressComponents?: any }): Promise<ApiResult<LocationUi>> {
   try {
     if (!locationId || !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
       return { success: false, error: "Invalid location ID format" };
@@ -241,7 +241,7 @@ export async function updateLocation(locationId: string, updates: { name?: strin
   }
 }
 
-export async function setActiveLocation(locationId: string | null): Promise<ActionResult<{ updated: true }>> {
+export async function setActiveLocation(locationId: string | null): Promise<ApiResult<{ updated: true }>> {
   try {
     if (locationId && !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(locationId)) {
       return { success: false, error: "Invalid location ID" };

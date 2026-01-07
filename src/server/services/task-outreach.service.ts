@@ -11,11 +11,11 @@ import type {
   SaveInteractionRequest,
 } from "~/lib/schemas/ui/task.schema";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
-import type { ActionResult } from "./types";
+import type { ApiResult } from "~/lib/types";
 import * as taskRepo from "~/server/db/repositories/task-outreach.repository";
 import { getSessionInfo } from "~/lib/auth";
 
-export async function fetchMyTasks(): Promise<ActionResult<OutreachTaskListItem[]>> {
+export async function fetchMyTasks(): Promise<ApiResult<OutreachTaskListItem[]>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -27,7 +27,7 @@ export async function fetchMyTasks(): Promise<ActionResult<OutreachTaskListItem[
   }
 }
 
-export async function fetchTasksForActiveLocation(): Promise<ActionResult<OutreachTaskListItem[]>> {
+export async function fetchTasksForActiveLocation(): Promise<ApiResult<OutreachTaskListItem[]>> {
   try {
     const session = await getSessionInfo();
     const locationId = session.activeLocationId;
@@ -42,7 +42,7 @@ export async function fetchTasksForActiveLocation(): Promise<ActionResult<Outrea
   }
 }
 
-export async function getActiveLocationId(): Promise<ActionResult<string | null>> {
+export async function getActiveLocationId(): Promise<ApiResult<string | null>> {
   try {
     const session = await getSessionInfo();
     return { success: true, data: session.activeLocationId };
@@ -52,7 +52,7 @@ export async function getActiveLocationId(): Promise<ActionResult<string | null>
   }
 }
 
-export async function fetchTaskById(taskId: string): Promise<ActionResult<OutreachTask | null>> {
+export async function fetchTaskById(taskId: string): Promise<ApiResult<OutreachTask | null>> {
   try {
     const task = await taskRepo.getTaskById(taskId);
     return { success: true, data: task };
@@ -62,7 +62,7 @@ export async function fetchTaskById(taskId: string): Promise<ActionResult<Outrea
   }
 }
 
-export async function fetchTask(taskId: string): Promise<ActionResult<OutreachTask | null>> {
+export async function fetchTask(taskId: string): Promise<ApiResult<OutreachTask | null>> {
   try {
     const task = await taskRepo.getTaskById(taskId);
     return { success: true, data: task };
@@ -72,7 +72,7 @@ export async function fetchTask(taskId: string): Promise<ActionResult<OutreachTa
   }
 }
 
-export async function fetchTasksByLocation(locationId: string): Promise<ActionResult<OutreachTaskListItem[]>> {
+export async function fetchTasksByLocation(locationId: string): Promise<ApiResult<OutreachTaskListItem[]>> {
   try {
     const tasks = await taskRepo.getTasksByLocation(locationId);
     return { success: true, data: tasks };
@@ -82,7 +82,7 @@ export async function fetchTasksByLocation(locationId: string): Promise<ActionRe
   }
 }
 
-export async function fetchMyAssignedUsers(taskId: string): Promise<ActionResult<AssignedUser[]>> {
+export async function fetchMyAssignedUsers(taskId: string): Promise<ApiResult<AssignedUser[]>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -94,7 +94,7 @@ export async function fetchMyAssignedUsers(taskId: string): Promise<ActionResult
   }
 }
 
-export async function fetchUnassignedCount(taskId: string): Promise<ActionResult<number>> {
+export async function fetchUnassignedCount(taskId: string): Promise<ApiResult<number>> {
   try {
     const count = await taskRepo.getUnassignedCount(taskId);
     return { success: true, data: count };
@@ -104,7 +104,7 @@ export async function fetchUnassignedCount(taskId: string): Promise<ActionResult
   }
 }
 
-export async function selfAssign(request: SelfAssignRequest): Promise<ActionResult<SelfAssignResult>> {
+export async function selfAssign(request: SelfAssignRequest): Promise<ApiResult<SelfAssignResult>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -116,7 +116,7 @@ export async function selfAssign(request: SelfAssignRequest): Promise<ActionResu
   }
 }
 
-export async function saveInteraction(request: SaveInteractionRequest): Promise<ActionResult<void>> {
+export async function saveInteraction(request: SaveInteractionRequest): Promise<ApiResult<void>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -136,7 +136,7 @@ export async function saveInteraction(request: SaveInteractionRequest): Promise<
   }
 }
 
-export async function skipUser(taskId: string, targetUserId: string): Promise<ActionResult<void>> {
+export async function skipUser(taskId: string, targetUserId: string): Promise<ApiResult<void>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;
@@ -148,7 +148,7 @@ export async function skipUser(taskId: string, targetUserId: string): Promise<Ac
   }
 }
 
-export async function createTask(request: SaveTaskRequest): Promise<ActionResult<string>> {
+export async function createTask(request: SaveTaskRequest): Promise<ApiResult<string>> {
   try {
     const session = await getSessionInfo();
     const userId = session.userId!;

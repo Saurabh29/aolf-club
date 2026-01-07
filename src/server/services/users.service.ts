@@ -11,7 +11,7 @@ import { getUsersForLocation, addUserToLocation } from "~/server/db/repositories
 import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/userGroup.repository";
 import { createEmailIdentity } from "~/server/db/repositories/email.repository";
 import type { GroupType } from "~/lib/schemas/db/types";
-import type { ActionResult } from "./types";
+import type { ApiResult } from "~/lib/types";
 
 export interface UserWithGroup {
   userId: string;
@@ -32,7 +32,7 @@ export interface UserWithGroup {
   }>;
 }
 
-export async function getUsersForActiveLocation(): Promise<ActionResult<UserWithGroup[]>> {
+export async function getUsersForActiveLocation(): Promise<ApiResult<UserWithGroup[]>> {
   try {
     const session = await getSessionInfo();
     const currentUserId = session.userId!;
@@ -90,7 +90,7 @@ export async function getUsersForActiveLocation(): Promise<ActionResult<UserWith
 export async function assignUsersToGroup(
   userIds: string[],
   groupType: GroupType
-): Promise<ActionResult<{ assigned: number; failed: number; errors: string[] }>> {
+): Promise<ApiResult<{ assigned: number; failed: number; errors: string[] }>> {
   try {
     const session = await getSessionInfo();
     const currentUserId = session.userId!;
@@ -161,7 +161,7 @@ export interface CreateUserInput {
   groupIds?: string[];
 }
 
-export async function createUserManual(input: CreateUserInput): Promise<ActionResult<UserWithGroup>> {
+export async function createUserManual(input: CreateUserInput): Promise<ApiResult<UserWithGroup>> {
   try {
     const session = await getSessionInfo();
     const currentUserId = session.userId!;
@@ -215,7 +215,7 @@ export interface ImportUsersInput {
   csvData: string;
 }
 
-export async function importUsersFromCSV(input: ImportUsersInput): Promise<ActionResult<{ imported: number; failed: number; errors: string[] }>> {
+export async function importUsersFromCSV(input: ImportUsersInput): Promise<ApiResult<{ imported: number; failed: number; errors: string[] }>> {
   try {
     const session = await getSessionInfo();
     const currentUserId = session.userId!;
