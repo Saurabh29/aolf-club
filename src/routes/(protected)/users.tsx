@@ -21,7 +21,6 @@ export const route = {
 } satisfies RouteDefinition;
 
 export default function UserManagement() {
-  
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);

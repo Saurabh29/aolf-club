@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Task Detail Page
  * 
  * Single-screen interface for task outreach management.
@@ -507,8 +507,8 @@ export default function TaskDetail() {
                         )}
                         {user.interaction && (
                           <div class="flex items-center gap-2 ml-4 text-xs text-gray-500">
-                            {user.interaction?.actionsTaken.called && <span>✓ Called</span>}
-                            {user.interaction?.actionsTaken.messaged && <span>✓ Messaged</span>}
+                            {user.interaction?.actionsTaken.called && <span>Γ£ô Called</span>}
+                            {user.interaction?.actionsTaken.messaged && <span>Γ£ô Messaged</span>}
                           </div>
                         )}
                       </div>
@@ -542,7 +542,7 @@ export default function TaskDetail() {
                                   } hover:text-yellow-400`}
                                   onClick={() => updateUserInput(user.targetUserId, "rating", star)}
                                 >
-                                  ★
+                                  Γÿà
                                 </button>
                               );
                             }}

@@ -78,7 +78,6 @@ const getSummaryStats = (summary: TaskReportSummary): SummaryStat[] => [
 ];
 
 export default function Dashboard() {
-
   const summary = () => DUMMY_SUMMARY;
   const summaryStats = () => getSummaryStats(summary());
 

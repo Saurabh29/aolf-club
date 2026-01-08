@@ -39,21 +39,21 @@ export default createMiddleware({
       const session = await getAuthSession();
       
       if (!session || !session.user) {
-        // Redirect to signin if not authenticated
+        // Redirect to home page if not authenticated
         return new Response(null, {
           status: 302,
           headers: {
-            Location: "/api/auth/signin",
+            Location: "/",
           },
         });
       }
     } catch (error) {
       console.error("Auth middleware error:", error);
-      // Redirect to signin on error
+      // Redirect to home page on error
       return new Response(null, {
         status: 302,
         headers: {
-          Location: "/api/auth/signin",
+          Location: "/",
         },
       });
     }

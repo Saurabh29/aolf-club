@@ -4,6 +4,7 @@
  * Page for creating a new outreach task using the multi-step TaskForm.
  */
 
+import { Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { TaskForm } from "~/components/TaskForm";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
@@ -32,5 +33,7 @@ export default function NewTask() {
     navigate("/tasks");
   };
 
-  return <TaskForm mode="NEW" onSave={handleSave} onCancel={handleCancel} />;
+  return (
+    <TaskForm mode="NEW" onSave={handleSave} onCancel={handleCancel} />
+  );
 }

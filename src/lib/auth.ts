@@ -1,5 +1,5 @@
 import { isServer } from "solid-js/web";
-import { query } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 
 /**
  * Internal implementation for fetching session data.
@@ -56,6 +56,22 @@ export const getAuthSession = query(async () => {
     return null;
   }
 }, "auth-session");
+
+/**
+ * Get the authenticated user or throw a redirect.
+ * Use this in protected routes to ensure authentication.
+ * Follows SolidStart recommended pattern.
+ * 
+ * This must be used with cache() to work properly with createAsync.
+ */
+export const getUser = query(async () => {
+  "use server";
+  const session = await _fetchSession();
+  if (!session || !session.user) {
+    throw redirect("/");
+  }
+  return session.user;
+}, "auth-user");
 
 export type SessionInfo = {
   userId: string | null;

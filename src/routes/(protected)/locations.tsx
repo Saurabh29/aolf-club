@@ -118,7 +118,7 @@ export default function LocationsPage() {
 
   return (
     <main class="container mx-auto py-8 px-4">
-      {/* Page Header */}
+
       <div class="mb-8">
         <div class="flex items-center justify-between">
           <div>
@@ -135,7 +135,6 @@ export default function LocationsPage() {
         </div>
       </div>
 
-      {/* Data + Loading + Error handled via Suspense + ErrorBoundary */}
       <ErrorBoundary fallback={
         <GenericCardList<LocationUi>
           items={[]}
