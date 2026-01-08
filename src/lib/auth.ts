@@ -2,40 +2,6 @@ import { isServer } from "solid-js/web";
 import { query, redirect } from "@solidjs/router";
 
 /**
- * Internal implementation for fetching session data.
- * Works on both client and server.
- */
-async function _fetchSession(): Promise<any | null> {
-  if (isServer) {
-    // Server-side path - use dynamic imports to avoid loading server code on client
-    try {
-      const { getSession } = await import("start-authjs");
-      const { getRequestEvent } = await import("solid-js/web");
-      const { authConfig } = await import("~/server/auth");
-      
-      const ev = getRequestEvent?.();
-      if (!ev) return null;
-      
-      const session = await getSession(ev.request as Request, authConfig as any);
-      return session ?? null;
-    } catch (e) {
-      return null;
-    }
-  } else {
-    // Client-side path
-    try {
-      const resp = await fetch("/api/auth/session", { credentials: "include" });
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      return data || null;
-    } catch (err) {
-      console.error("[getAuthSession] failed:", err);
-      return null;
-    }
-  }
-}
-
-/**
  * Unified session query that works seamlessly on both server and client.
  * 
  * Usage in components (with caching):
@@ -50,7 +16,31 @@ async function _fetchSession(): Promise<any | null> {
 export const getAuthSession = query(async () => {
   "use server";
   try {
-    return await _fetchSession();
+    if (isServer) {
+      try {
+        const { getSession } = await import("start-authjs");
+        const { getRequestEvent } = await import("solid-js/web");
+        const { authConfig } = await import("~/server/auth");
+
+        const ev = getRequestEvent?.();
+        if (!ev) return null;
+
+        const session = await getSession(ev.request as Request, authConfig as any);
+        return session ?? null;
+      } catch (e) {
+        return null;
+      }
+    } else {
+      try {
+        const resp = await fetch("/api/auth/session", { credentials: "include" });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data || null;
+      } catch (err) {
+        console.error("[getAuthSession] failed:", err);
+        return null;
+      }
+    }
   } catch (e) {
     console.error("Failed to fetch session:", e);
     return null;
@@ -66,7 +56,7 @@ export const getAuthSession = query(async () => {
  */
 export const getUser = query(async () => {
   "use server";
-  const session = await _fetchSession();
+  const session = await getAuthSession();
   if (!session || !session.user) {
     throw redirect("/");
   }
