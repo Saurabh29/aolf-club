@@ -24,6 +24,7 @@ export default function UserManagement() {
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);
+  const [activeTab, setActiveTab] = createSignal<"members" | "leads">("members");
 
   // Fetch users using SolidStart query + createAsync
   const usersResource = createAsync<UserWithGroup[] | undefined>(() => getUsersForActiveLocationQuery(), { deferStream: true });
@@ -77,6 +78,7 @@ export default function UserManagement() {
         open={showImportUsers()}
         onOpenChange={setShowImportUsers}
         onUsersImported={() => refetch()}
+        defaultType={activeTab() === "leads" ? "LEAD" : "MEMBER"}
       />
       
       <div class="mb-6 flex items-center justify-between">
@@ -103,8 +105,8 @@ export default function UserManagement() {
         <Suspense fallback={<div class="text-center py-8 text-gray-500">Loading users...</div>}>
           <Tabs defaultValue="members">
           <TabsList>
-            <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="leads">Leads</TabsTrigger>
+            <TabsTrigger value="members" onClick={() => setActiveTab("members")}>Members</TabsTrigger>
+            <TabsTrigger value="leads" onClick={() => setActiveTab("leads")}>Leads</TabsTrigger>
           </TabsList>
 
           <TabsContent value="members">
@@ -120,3 +122,4 @@ export default function UserManagement() {
     </div>
   );
 }
+

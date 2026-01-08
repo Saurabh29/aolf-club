@@ -1,4 +1,6 @@
-import { createSignal, Show, type Component } from "solid-js";
+import { createSignal, Show, createEffect, type Component } from "solid-js";
+import { RadioGroup, RadioGroupItem, RadioGroupItemLabel } from "~/components/ui/radio-group";
+import { User, Users } from "lucide-solid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -8,6 +10,8 @@ export interface ImportUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUsersImported?: () => void;
+  /** default type for imported contacts: 'MEMBER' or 'LEAD' */
+  defaultType?: "MEMBER" | "LEAD";
 }
 
 export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
@@ -15,6 +19,14 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [result, setResult] = createSignal<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const [type, setType] = createSignal<"MEMBER" | "LEAD">("MEMBER");
+
+  // When dialog opens, initialize the type from the prop
+  createEffect(() => {
+    if (props.open) {
+      setType(props.defaultType ?? "MEMBER");
+    }
+  });
 
   const handleFileChange = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
@@ -50,6 +62,7 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
     try {
       const importResult = await importUsersFromCSVAction({
         csvData: csvContent(),
+        type: type(),
       });
 
       if (importResult.success) {
@@ -92,6 +105,34 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} class="space-y-4">
+          <div>
+            <Label>Import Type</Label>
+            <div class="mt-2">
+              <RadioGroup value={type()} onChange={(v: any) => setType(v as "MEMBER" | "LEAD") }>
+                <div class="flex gap-3">
+                  <RadioGroupItem value="MEMBER" class="rounded-lg border p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm data-[selected]:border-primary data-[selected]:bg-primary/5">
+                    <div class="p-2 rounded-md bg-gray-100">
+                      <User class="w-5 h-5 text-gray-700" />
+                    </div>
+                    <div>
+                      <RadioGroupItemLabel class="block text-sm font-medium">User</RadioGroupItemLabel>
+                      <div class="text-xs text-gray-500">Imported contacts become users</div>
+                    </div>
+                  </RadioGroupItem>
+
+                  <RadioGroupItem value="LEAD" class="rounded-lg border p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm data-[selected]:border-primary data-[selected]:bg-primary/5">
+                    <div class="p-2 rounded-md bg-gray-100">
+                      <Users class="w-5 h-5 text-gray-700" />
+                    </div>
+                    <div>
+                      <RadioGroupItemLabel class="block text-sm font-medium">Lead</RadioGroupItemLabel>
+                      <div class="text-xs text-gray-500">Imported contacts become leads</div>
+                    </div>
+                  </RadioGroupItem>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
           <div class="space-y-2">
             <Label for="csvFile">CSV File</Label>
             <input
