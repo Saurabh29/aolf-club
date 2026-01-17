@@ -8,6 +8,8 @@ export interface ImportUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUsersImported?: () => void;
+  /** If provided, forces the import type and hides the type selector */
+  forcedType?: "MEMBER" | "LEAD";
 }
 
 export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
@@ -15,6 +17,8 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [result, setResult] = createSignal<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const forced = props.forcedType;
+  const [selectedType, setSelectedType] = createSignal<"MEMBER" | "LEAD">(props.forcedType ?? "MEMBER");
 
   const handleFileChange = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
@@ -50,6 +54,7 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
     try {
       const importResult = await importUsersFromCSVAction({
         csvData: csvContent(),
+        type: forced ?? selectedType(),
       });
 
       if (importResult.success) {

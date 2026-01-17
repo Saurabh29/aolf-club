@@ -5,7 +5,7 @@
  * Integrated with real DynamoDB data (no dummy data).
  */
 
-import { createSignal, createMemo, Suspense, ErrorBoundary } from "solid-js";
+import { createSignal, createMemo, Suspense, ErrorBoundary, Show } from "solid-js";
 import { UserTable } from "~/components/UserTable";
 import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
@@ -24,6 +24,8 @@ export default function UserManagement() {
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);
+  const [forcedImportType, setForcedImportType] = createSignal<"MEMBER" | "LEAD" | undefined>(undefined);
+  const [activeTab, setActiveTab] = createSignal<"leads" | "members">("leads");
 
   // Fetch users using SolidStart query + createAsync
   const usersResource = createAsync<UserWithGroup[] | undefined>(() => getUsersForActiveLocationQuery(), { deferStream: true });
@@ -75,8 +77,12 @@ export default function UserManagement() {
       
       <ImportUsersDialog
         open={showImportUsers()}
-        onOpenChange={setShowImportUsers}
+        onOpenChange={(open) => {
+          setShowImportUsers(open);
+          if (!open) setForcedImportType(undefined);
+        }}
         onUsersImported={() => refetch()}
+        forcedType={forcedImportType()}
       />
       
       <div class="mb-6 flex items-center justify-between">
@@ -87,9 +93,15 @@ export default function UserManagement() {
           </p>
         </div>
         <div class="flex gap-2">
-          <Button variant="outline" onClick={() => setShowImportUsers(true)}>
-            Import Users
-          </Button>
+          <Show when={activeTab() === "members"} fallback={
+            <Button variant="outline" onClick={() => { setForcedImportType("LEAD"); setShowImportUsers(true); }}>
+              Import Leads
+            </Button>
+          }>
+            <Button variant="outline" onClick={() => { setForcedImportType("MEMBER"); setShowImportUsers(true); }}>
+              Import Users
+            </Button>
+          </Show>
           <Button variant="default" onClick={() => setShowAddUser(true)}>
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -101,18 +113,18 @@ export default function UserManagement() {
 
       <ErrorBoundary fallback={<div class="text-center py-8 text-red-600">Error loading users. <Button onClick={() => void refetch()}>Retry</Button></div>}>
         <Suspense fallback={<div class="text-center py-8 text-gray-500">Loading users...</div>}>
-          <Tabs defaultValue="members">
+          <Tabs value={activeTab()} onChange={(v: string) => setActiveTab(v as "leads" | "members") } defaultValue="leads">
           <TabsList>
-            <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="members">
-            <UserTable users={members()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
-          </TabsContent>
 
           <TabsContent value="leads">
             <UserTable users={leads()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
+          </TabsContent>
+
+          <TabsContent value="members">
+            <UserTable users={members()} onSelectionChange={handleSelectionChange} onAssignToGroup={handleAssignToGroup} />
           </TabsContent>
           </Tabs>
         </Suspense>
