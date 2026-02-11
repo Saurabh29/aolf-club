@@ -29,6 +29,7 @@ import { sanitizeLocationCode } from "~/lib/schemas/ui/location.schema";
 import type { AddLocationForm } from "~/lib/schemas/ui/location.schema";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
 import { cn } from "~/lib/utils";
+import { useAction } from "@solidjs/router";
 
 export interface AddLocationDialogProps {
   /** Whether the dialog is open */
@@ -42,6 +43,9 @@ export interface AddLocationDialogProps {
 }
 
 export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
+  const createLocation = useAction(createLocationAction);
+  const updateLocation = useAction(updateLocationAction);
+
   // Form state
   const [name, setName] = createSignal("");
   const [locationCode, setLocationCode] = createSignal("");
@@ -167,7 +171,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
           updatePayload.addressComponents = currentPlace.addressComponents;
         }
 
-        const result = await updateLocationAction(props.editLocation!.id, updatePayload);
+        const result = await updateLocation(props.editLocation!.id, updatePayload);
 
         if (!result.success) {
           setError(result.error);
@@ -188,7 +192,7 @@ export const AddLocationDialog: Component<AddLocationDialogProps> = (props) => {
           status: "active",
         };
 
-        const result = await createLocationAction(formData);
+        const result = await createLocation(formData);
 
         if (!result.success) {
           setError(result.error);

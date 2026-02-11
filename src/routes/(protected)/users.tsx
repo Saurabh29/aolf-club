@@ -11,7 +11,7 @@ import { Button } from "~/components/ui/button";
 import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { createAsync, type RouteDefinition } from "@solidjs/router";
+import { createAsync, type RouteDefinition, useAction } from "@solidjs/router";
 import { getUsersForActiveLocationQuery, assignUsersToGroupAction } from "~/server/api/users";
 import type { UserWithGroup } from "~/server/api/users";
 import type { GroupType } from "~/lib/schemas/db/types";
@@ -21,6 +21,8 @@ export const route = {
 } satisfies RouteDefinition;
 
 export default function UserManagement() {
+  const assignUsersToGroup = useAction(assignUsersToGroupAction);
+
   // Dialog state
   const [showAddUser, setShowAddUser] = createSignal(false);
   const [showImportUsers, setShowImportUsers] = createSignal(false);
@@ -40,7 +42,7 @@ export default function UserManagement() {
 
   const handleAssignToGroup = async (users: UserWithGroup[], groupType: GroupType) => {
     const userIds = users.map((u) => u.userId);
-    const result = await assignUsersToGroupAction(userIds, groupType);
+    const result = await assignUsersToGroup(userIds, groupType);
     
     if (result.success) {
       const { assigned, failed, errors } = result.data;

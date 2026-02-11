@@ -5,17 +5,18 @@
  */
 
 import { Show } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useAction } from "@solidjs/router";
 import { TaskForm } from "~/components/TaskForm";
 import type { SaveTaskRequest } from "~/lib/schemas/ui";
 import { createTaskAction } from "~/server/api/task-outreach";
 
 export default function NewTask() {
   const navigate = useNavigate();
+  const createTask = useAction(createTaskAction);
 
   const handleSave = async (request: SaveTaskRequest) => {
     try {
-      const result = await createTaskAction(request);
+      const result = await createTask(request);
       if (!result.success) {
         alert(`Failed to create task: ${result.error}`);
         return;

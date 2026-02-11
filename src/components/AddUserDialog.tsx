@@ -4,6 +4,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { createUserManualAction } from "~/server/api/users";
+import { useAction } from "@solidjs/router";
 
 export interface AddUserDialogProps {
   open: boolean;
@@ -12,6 +13,8 @@ export interface AddUserDialogProps {
 }
 
 export const AddUserDialog: Component<AddUserDialogProps> = (props) => {
+  const createUserManual = useAction(createUserManualAction);
+
   const [displayName, setDisplayName] = createSignal("");
   const [email, setEmail] = createSignal("");
   const [phone, setPhone] = createSignal("");
@@ -26,7 +29,7 @@ export const AddUserDialog: Component<AddUserDialogProps> = (props) => {
     setError(null);
 
     try {
-      const result = await createUserManualAction({
+      const result = await createUserManual({
         displayName: displayName(),
         email: email() || undefined,
         phone: phone() || undefined,

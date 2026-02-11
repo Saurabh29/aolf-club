@@ -39,7 +39,7 @@ export const setActiveLocationAction = action(async (locationId: string | null) 
   return await setActiveLocation(locationId);
 }, "set-active-location");
 
-export const createLocationAction = action(async (formData: any) => {
+export const createLocationAction = action(async (formData) => {
   "use server";
   return await createLocation(formData);
 }, "create-location");

@@ -16,7 +16,7 @@
  */
 
 import { Show, createSignal, For, createResource, createMemo } from "solid-js";
-import { useSearchParams } from "@solidjs/router";
+import { useSearchParams, useAction } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -33,6 +33,10 @@ import {
 
 export default function ServeHub() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const fetchTaskById = useAction(fetchTaskByIdAction);
+  const fetchMyAssignedUsers = useAction(fetchMyAssignedUsersAction);
+  const saveInteraction = useAction(saveInteractionAction);
+  const skipUser = useAction(skipUserAction);
   
   // Selected task (from query param)
   const selectedTaskId = createMemo(() => searchParams.taskId as string | undefined);
@@ -45,7 +49,7 @@ export default function ServeHub() {
   // Fetch task details when task is selected
   const [taskDetails] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    const result = await fetchTaskByIdAction(taskId);
+    const result = await fetchTaskById(taskId);
     if (!result.success) {
       console.error("Failed to fetch task:", result.error);
       return null;
@@ -56,7 +60,7 @@ export default function ServeHub() {
   // Fetch assigned users for selected task
   const [assignedUsers, { refetch: refetchUsers }] = createResource(selectedTaskId, async (taskId) => {
     if (!taskId) return null;
-    const result = await fetchMyAssignedUsersAction(taskId);
+    const result = await fetchMyAssignedUsers(taskId);
     if (!result.success) {
       console.error("Failed to fetch assigned users:", result.error);
       return null;
@@ -95,7 +99,7 @@ export default function ServeHub() {
       const userInteraction = interactions()[user.targetUserId] || {};
       const existingInteraction = user.interaction;
       
-      const result = await saveInteractionAction({
+      const result = await saveInteraction({
         taskId: selectedTaskId()!,
         targetUserId: user.targetUserId,
         actionsTaken: {
@@ -134,7 +138,7 @@ export default function ServeHub() {
     if (!confirm(`Skip ${user.name}? This will remove them from your list.`)) return;
     
     try {
-      await skipUserAction(selectedTaskId()!, user.targetUserId);
+      await skipUser(selectedTaskId()!, user.targetUserId);
       await refetchUsers();
     } catch (error: any) {
       console.error("Failed to skip:", error);

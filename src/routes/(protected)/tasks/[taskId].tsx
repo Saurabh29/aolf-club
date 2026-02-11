@@ -11,7 +11,7 @@
  */
 
 import { Show, createSignal, For, createResource } from "solid-js";
-import { A, useParams } from "@solidjs/router";
+import { A, useParams, useAction } from "@solidjs/router";
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -34,6 +34,12 @@ import {
 
 export default function TaskDetail() {
   const params = useParams();
+  const fetchTask = useAction(fetchTaskAction);
+  const fetchMyAssignedUsers = useAction(fetchMyAssignedUsersAction);
+  const fetchUnassignedCount = useAction(fetchUnassignedCountAction);
+  const selfAssign = useAction(selfAssignAction);
+  const saveInteraction = useAction(saveInteractionAction);
+  const skipUser = useAction(skipUserAction);
 
   // Format date for display
   const formatDate = (isoString: string) => {
@@ -58,7 +64,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) throw new Error("Task ID is required");
-      const result = await fetchTaskAction(taskId);
+      const result = await fetchTask(taskId);
       if (!result.success) {
         throw new Error(result.error ?? "Failed to fetch task");
       }
@@ -74,7 +80,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return [];
-      const result = await fetchMyAssignedUsersAction(taskId);
+      const result = await fetchMyAssignedUsers(taskId);
       if (!result.success) {
         console.error("Failed to fetch assigned users:", result.error);
         return [];
@@ -88,7 +94,7 @@ export default function TaskDetail() {
     () => params.taskId,
     async (taskId) => {
       if (!taskId) return 0;
-      const result = await fetchUnassignedCountAction(taskId);
+      const result = await fetchUnassignedCount(taskId);
       if (!result.success) {
         console.error("Failed to fetch unassigned count:", result.error);
         return 0;
@@ -169,7 +175,7 @@ export default function TaskDetail() {
         followUpAt,
       };
 
-      const result = await saveInteractionAction(request);
+      const result = await saveInteraction(request);
       if (!result.success) {
         setError(result.error ?? "Failed to save interaction");
         setSaveStatus(null);
@@ -194,7 +200,7 @@ export default function TaskDetail() {
         setError("Task ID is missing");
         return;
       }
-      const result = await skipUserAction(params.taskId, userId);
+      const result = await skipUser(params.taskId, userId);
       if (!result.success) {
         setError(result.error ?? "Failed to skip user");
         return;
@@ -217,7 +223,7 @@ export default function TaskDetail() {
         count: assignCount(),
       };
 
-      const result = await selfAssignAction(request);
+      const result = await selfAssign(request);
       if (!result.success) {
         setError(result.error ?? "Failed to assign users");
         return;

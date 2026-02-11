@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { importUsersFromCSVAction } from "~/server/api/users";
+import { useAction } from "@solidjs/router";
 
 export interface ImportUsersDialogProps {
   open: boolean;
@@ -13,6 +14,8 @@ export interface ImportUsersDialogProps {
 }
 
 export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
+  const importUsersFromCSV = useAction(importUsersFromCSVAction);
+
   const [csvContent, setCsvContent] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -52,7 +55,7 @@ export const ImportUsersDialog: Component<ImportUsersDialogProps> = (props) => {
     setResult(null);
 
     try {
-      const importResult = await importUsersFromCSVAction({
+      const importResult = await importUsersFromCSV({
         csvData: csvContent(),
         type: forced ?? selectedType(),
       });

@@ -8,7 +8,7 @@
  */
 
 import { createSignal, Show, onMount, Suspense, ErrorBoundary } from "solid-js";
-import { createAsync, type RouteDefinition } from "@solidjs/router";
+import { createAsync, type RouteDefinition, useAction } from "@solidjs/router";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
@@ -22,6 +22,8 @@ import type { CardAction } from "~/lib/schemas/ui/card.schema";
 import { Pencil, Trash2 } from "lucide-solid";
 
 export default function LocationsPage() {
+  const deleteLocation = useAction(deleteLocationAction);
+
   // Track if we're on client side
   const [isClient, setIsClient] = createSignal(false);
   onMount(() => setIsClient(true));
@@ -88,7 +90,7 @@ export default function LocationsPage() {
     }
 
     try {
-      const result = await deleteLocationAction(loc.id);
+      const result = await deleteLocation(loc.id);
       if (result.success) {
         await refetch();
       } else {

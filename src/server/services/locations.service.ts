@@ -109,10 +109,11 @@ export async function createLocation(
       console.error("Failed to create default groups/roles for location:", err);
     }
 
-    return {
+    const result: ApiResult<LocationUi> = {
       success: true,
       data: toUiLocation(dbLocation),
     };
+    return result;
   } catch (error) {
     console.error("[createLocation] Server action failed:", error);
 
