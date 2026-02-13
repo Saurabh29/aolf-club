@@ -12,6 +12,7 @@ export {
   applyOffsetPagination,
   type DataLoader,
 } from "./in-memory.data-source";
+export { DynamoUserDataSource } from "./dynamo-user.data-source";
 export {
   registerDataSource,
   getDataSource,
