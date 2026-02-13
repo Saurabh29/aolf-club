@@ -22,3 +22,4 @@ export {
   type DataSourceStrategy,
   type ResourceName,
 } from "./resolver";
+export { initializeDataSources, ensureDataSourcesInitialized } from "./init";
