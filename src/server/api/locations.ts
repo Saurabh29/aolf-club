@@ -1,25 +1,29 @@
 import { query, action } from "@solidjs/router";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
+import type { QuerySpec } from "~/lib/schemas/query";
 
 import {
-  getLocations,
   getUserLocations,
-  getLocationById,
   setActiveLocation,
   createLocation,
   updateLocation,
   deleteLocation,
+  queryLocations,
+  queryActiveLocations,
+  searchLocationsByName,
+  queryLocationById,
 } from "~/server/services";
 
 export type { LocationUi };
 
-export const getLocationsQuery = query(async () => {
-  "use server";
-  const result = await getLocations();
-  if (!result.success) throw new Error(result.error ?? "Failed to fetch locations");
-  return result.data;
-}, "locations-for-user");
+// ============================================================================
+// QUERY ABSTRACTION API
+// ============================================================================
 
+/**
+ * Get locations for current user (specialized for dropdown/switcher UI)
+ * Returns simplified shape with id, name, and activeLocationId
+ */
 export const getUserLocationsQuery = query(async () => {
   "use server";
   const result = await getUserLocations();
@@ -27,12 +31,61 @@ export const getUserLocationsQuery = query(async () => {
   return result.data;
 }, "user-locations");
 
-export const getLocationByIdQuery = query(async (locationId: string) => {
+/**
+ * Query locations with filters, sorting, and pagination
+ * 
+ * @example
+ * ```tsx
+ * const locationsResult = createAsync(() => queryLocationsQuery({
+ *   filters: [{ field: "status", op: "eq", value: "active" }],
+ *   sort: { field: "name", direction: "asc" },
+ *   pagination: { mode: "offset", limit: 50, offset: 0 }
+ * }));
+ * ```
+ */
+export const queryLocationsQuery = query(async (spec: QuerySpec) => {
   "use server";
-  const result = await getLocationById(locationId);
-  if (!result.success) throw new Error(result.error ?? "Failed to fetch location");
+  const result = await queryLocations(spec);
+  if (!result.success) throw new Error(result.error ?? "Failed to query locations");
   return result.data;
-}, "location-by-id");
+}, "query-locations");
+
+/**
+ * Get all active locations sorted by name
+ */
+export const queryActiveLocationsQuery = query(async (
+  sortBy?: "name" | "createdAt" | "updatedAt",
+  limit?: number
+) => {
+  "use server";
+  const result = await queryActiveLocations(sortBy, limit);
+  if (!result.success) throw new Error(result.error ?? "Failed to query active locations");
+  return result.data;
+}, "query-active-locations");
+
+/**
+ * Search locations by name
+ */
+export const searchLocationsByNameQuery = query(async (nameSearch: string, limit?: number) => {
+  "use server";
+  const result = await searchLocationsByName(nameSearch, limit);
+  if (!result.success) throw new Error(result.error ?? "Failed to search locations");
+  return result.data;
+}, "search-locations-by-name");
+
+/**
+ * Get location by ID (query abstraction version)
+ */
+export const queryLocationByIdQuery = query(async (locationId: string) => {
+  "use server";
+  const result = await queryLocationById(locationId);
+  if (!result.success) throw new Error(result.error ?? "Failed to query location by ID");
+  return result.data;
+}, "query-location-by-id");
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
 
 export const setActiveLocationAction = action(async (locationId: string | null) => {
   "use server";

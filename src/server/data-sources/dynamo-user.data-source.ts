@@ -17,15 +17,28 @@ import type { QuerySpec, QueryResult, FilterCondition, PaginationSpec } from "~/
 import type { User } from "~/lib/schemas/db/user.schema";
 import { UserSchema } from "~/lib/schemas/db/user.schema";
 import { docClient, TABLE_NAME, Keys } from "~/server/db/client";
+import { validateFilters, USER_FILTERABLE_FIELDS, FilterValidationError } from "~/server/data-sources/query-validation";
 
 /**
  * DynamoUserDataSource - DynamoDB-backed data source for User entities.
  * 
  * Uses docClient's ScanCommand since users don't share a common PK value.
  * Each user has a unique PK (USER#<userId>), so we scan with filters.
+ * 
+ * Phase 7: Includes filter validation to prevent unsafe queries.
  */
 export class DynamoUserDataSource implements DataSource<User> {
   async query(spec: QuerySpec): Promise<QueryResult<User>> {
+    // Phase 7: Validate filters against allowed fields
+    try {
+      validateFilters(spec, USER_FILTERABLE_FIELDS);
+    } catch (error) {
+      if (error instanceof FilterValidationError) {
+        throw new Error(error.message);
+      }
+      throw error;
+    }
+
     // Build FilterExpression and ExpressionAttributeValues
     const { filterExpression, expressionAttributeNames, expressionAttributeValues } = 
       this.buildFilterExpression(spec.filters);

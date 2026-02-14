@@ -7,19 +7,19 @@
  * TODO: Add auth check here when authentication is implemented
  */
 
-import { createSignal, Show, onMount, Suspense, ErrorBoundary } from "solid-js";
+import { createSignal, Show, onMount, Suspense, ErrorBoundary, createMemo } from "solid-js";
 import { createAsync, type RouteDefinition, useAction } from "@solidjs/router";
 import { Button } from "~/components/ui/button";
 import { GenericCardList } from "~/components/GenericCardList";
 import { AddLocationDialog } from "~/components/AddLocationDialog";
-import { getLocationsQuery, deleteLocationAction } from "~/server/api/locations";
-
-export const route = {
-  preload: () => getLocationsQuery(),
-} satisfies RouteDefinition;
+import { queryActiveLocationsQuery, deleteLocationAction } from "~/server/api/locations";
 import type { LocationUi } from "~/lib/schemas/ui/location.schema";
 import type { CardAction } from "~/lib/schemas/ui/card.schema";
 import { Pencil, Trash2 } from "lucide-solid";
+
+export const route = {
+  preload: () => queryActiveLocationsQuery("name", 1000),
+} satisfies RouteDefinition;
 
 export default function LocationsPage() {
   const deleteLocation = useAction(deleteLocationAction);
@@ -40,12 +40,18 @@ export default function LocationsPage() {
   });
 
   // Fetch locations using SolidStart query + createAsync (SSR-safe and cacheable)
-  const locations = createAsync(() => getLocationsQuery(), { deferStream: true });
+  const locationsResult = createAsync(() => queryActiveLocationsQuery("name", 1000), { deferStream: true });
+  
+  // Transform Location to LocationUi (add id field)
+  const locations = createMemo(() => {
+    const locs = locationsResult()?.items ?? [];
+    return locs.map((loc) => ({ ...loc, id: loc.locationId })) as LocationUi[];
+  });
 
   // Helper to refetch the query (re-runs on the server)
   const refetch = async () => {
     try {
-      await getLocationsQuery();
+      await queryActiveLocationsQuery("name", 1000);
     } catch (e) {
       // ignore - ErrorBoundary will surface errors
     }

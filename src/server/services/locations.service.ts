@@ -25,6 +25,8 @@ import {
 } from "~/lib/schemas/ui/location.schema";
 import type { Location } from "~/lib/schemas/db/location.schema";
 import type { ApiResult } from "~/lib/types";
+import type { QuerySpec, QueryResult } from "~/lib/schemas/query";
+import { queryResource, getResourceById } from "~/server/services/query.service";
 
 function toUiLocation(dbLocation: Location): LocationUi {
   return {
@@ -254,5 +256,113 @@ export async function setActiveLocation(locationId: string | null): Promise<ApiR
   } catch (error) {
     console.error("[setActiveLocation] Failed:", error);
     return { success: false, error: error instanceof Error ? error.message : "Failed to set active location" };
+  }
+}
+
+/**
+ * ============================================================================
+ * QUERY ABSTRACTION LAYER FUNCTIONS
+ * ============================================================================
+ * 
+ * New functions that use the query abstraction layer for filtering,
+ * sorting, and pagination. These provide consistent API and data-source
+ * independence.
+ */
+
+/**
+ * Query locations with filters, sorting, and pagination (In-memory)
+ * 
+ * Uses the query abstraction layer. Since locations are small dataset,
+ * uses InMemoryDataSource for fast queries with full feature support.
+ * 
+ * Supports:
+ * - Any field filtering (in-memory allows all fields)
+ * - Sorting by any field
+ * - Offset-based pagination with totalCount
+ * 
+ * @param spec Query specification (filters, sort, pagination)
+ * @returns ApiResult with QueryResult (items, totalCount)
+ * 
+ * @example
+ * ```typescript
+ * const result = await queryLocations({
+ *   filters: [{ field: "status", op: "eq", value: "active" }],
+ *   sort: { field: "name", direction: "asc" },
+ *   pagination: { mode: "offset", limit: 50, offset: 0 }
+ * });
+ * ```
+ */
+export async function queryLocations(spec: QuerySpec): Promise<ApiResult<QueryResult<Location>>> {
+  try {
+    return await queryResource<Location>("locations", spec);
+  } catch (error) {
+    console.error("[queryLocations] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to query locations"
+    };
+  }
+}
+
+/**
+ * Get all active locations with sorting (convenience wrapper)
+ * 
+ * Common use case: list all active locations sorted by name.
+ * 
+ * @param sortBy Field to sort by (default: "name")
+ * @param limit Optional limit
+ * @returns ApiResult with QueryResult
+ */
+export async function queryActiveLocations(
+  sortBy: "name" | "createdAt" | "updatedAt" = "name",
+  limit = 100
+): Promise<ApiResult<QueryResult<Location>>> {
+  return queryLocations({
+    filters: [{ field: "status", op: "eq", value: "active" }],
+    sort: { field: sortBy, direction: "asc" },
+    pagination: { mode: "offset", limit, offset: 0 },
+  });
+}
+
+/**
+ * Search locations by name (convenience wrapper)
+ * 
+ * Uses contains operator for partial matching.
+ * 
+ * @param nameSearch Search query
+ * @param limit Optional limit
+ * @returns ApiResult with QueryResult
+ */
+export async function searchLocationsByName(
+  nameSearch: string,
+  limit = 50
+): Promise<ApiResult<QueryResult<Location>>> {
+  return queryLocations({
+    filters: [
+      { field: "status", op: "eq", value: "active" },
+      { field: "name", op: "contains", value: nameSearch },
+    ],
+    sort: { field: "name", direction: "asc" },
+    pagination: { mode: "offset", limit, offset: 0 },
+  });
+}
+
+/**
+ * Get location by ID (query abstraction version)
+ * 
+ * Optimized single-location lookup using getResourceById.
+ * 
+ * @param locationId Location ID
+ * @returns ApiResult with Location or null
+ */
+export async function queryLocationById(locationId: string): Promise<ApiResult<Location | null>> {
+  try {
+    return await getResourceById<Location>("locations", locationId);
+  } catch (error) {
+    console.error("[queryLocationById] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get location"
+    };
   }
 }

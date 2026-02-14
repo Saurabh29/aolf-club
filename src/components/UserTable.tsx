@@ -28,18 +28,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "~/components/ui/dropdown-menu";
-import type { UserWithGroup } from "~/server/api/users";
+import type { User } from "~/lib/schemas/db";
 
 export interface UserTableProps {
-  users: UserWithGroup[];
+  users: User[];
   onSelectionChange?: (selectedUserIds: string[]) => void;
   bulkActions?: Array<{
     label: string;
     icon?: any;
     variant?: "default" | "outline" | "secondary" | "destructive";
-    onClick: (selectedUsers: UserWithGroup[]) => void;
+    onClick: (selectedUsers: User[]) => void;
   }>;
-  onAssignToGroup?: (selectedUsers: UserWithGroup[], groupType: "ADMIN" | "TEACHER" | "VOLUNTEER") => void;
+  onAssignToGroup?: (selectedUsers: User[], groupType: "ADMIN" | "TEACHER" | "VOLUNTEER") => void;
 }
 
 export const UserTable: Component<UserTableProps> = (props) => {
@@ -207,13 +207,6 @@ export const UserTable: Component<UserTableProps> = (props) => {
                         <Show when={user.isAdmin}>
                           <Badge variant="default">ADMIN</Badge>
                         </Show>
-                        <For each={user.groups} fallback={<Badge variant="secondary">NO GROUPS</Badge>}>
-                          {(group) => (
-                            <Badge variant="outline">
-                              {group.groupName || group.groupType}
-                            </Badge>
-                          )}
-                        </For>
                         <Badge variant="outline">{user.userType}</Badge>
                       </div>
                     </TableCell>

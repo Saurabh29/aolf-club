@@ -23,3 +23,11 @@ export {
   type ResourceName,
 } from "./resolver";
 export { initializeDataSources, ensureDataSourcesInitialized } from "./init";
+export {
+  validateFilters,
+  buildUserFilters,
+  FilterValidationError,
+  USER_FILTERABLE_FIELDS,
+  UserFilterBuilder,
+  type FilterableFieldConfig,
+} from "./query-validation";

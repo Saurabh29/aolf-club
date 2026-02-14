@@ -2,7 +2,7 @@
  * User Management Page
  * 
  * Table-based user list with multi-select and bulk actions.
- * Integrated with real DynamoDB data (no dummy data).
+ * Integrated with real DynamoDB data using query abstraction.
  */
 
 import { createSignal, createMemo, Suspense, ErrorBoundary, Show } from "solid-js";
@@ -12,12 +12,12 @@ import { AddUserDialog } from "~/components/AddUserDialog";
 import { ImportUsersDialog } from "~/components/ImportUsersDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { createAsync, type RouteDefinition, useAction } from "@solidjs/router";
-import { getUsersForActiveLocationQuery, assignUsersToGroupAction } from "~/server/api/users";
-import type { UserWithGroup } from "~/server/api/users";
+import { queryUsersByLocationQuery, assignUsersToGroupAction, getCurrentUserActiveLocationQuery } from "~/server/api/users";
+import type { User } from "~/lib/schemas/db";
 import type { GroupType } from "~/lib/schemas/db/types";
 
 export const route = {
-  preload: () => getUsersForActiveLocationQuery(),
+  preload: () => getCurrentUserActiveLocationQuery(),
 } satisfies RouteDefinition;
 
 export default function UserManagement() {
@@ -29,19 +29,40 @@ export default function UserManagement() {
   const [forcedImportType, setForcedImportType] = createSignal<"MEMBER" | "LEAD" | undefined>(undefined);
   const [activeTab, setActiveTab] = createSignal<"leads" | "members">("leads");
 
-  // Fetch users using SolidStart query + createAsync
-  const usersResource = createAsync<UserWithGroup[] | undefined>(() => getUsersForActiveLocationQuery(), { deferStream: true });
+  // Get current user's active location ID from DB
+  const activeLocationId = createAsync(() => getCurrentUserActiveLocationQuery());
+  
+  const locId = () => {
+    const id = activeLocationId();
+    return id ?? undefined;
+  };
+
+  // Fetch users for active location using query abstraction
+  const usersResult = createAsync(() => {
+    const locationId = locId();
+    if (!locationId) {
+      return Promise.resolve({ items: [], nextCursor: undefined });
+    }
+    return queryUsersByLocationQuery(locationId, 1000); // Get up to 1000 users
+  }, { deferStream: true });
+
+  const users = () => {
+    const result = usersResult()?.items ?? [];
+    return result;
+  };
 
   const refetch = async () => {
+    const locationId = locId();
+    if (!locationId) return;
     try {
-      await getUsersForActiveLocationQuery();
+      await queryUsersByLocationQuery(locationId, 1000);
     } catch (e) {
       // ignore, ErrorBoundary will surface
     }
   };
 
-  const handleAssignToGroup = async (users: UserWithGroup[], groupType: GroupType) => {
-    const userIds = users.map((u) => u.userId);
+  const handleAssignToGroup = async (selectedUsers: User[], groupType: GroupType) => {
+    const userIds = selectedUsers.map((u) => u.userId);
     const result = await assignUsersToGroup(userIds, groupType);
     
     if (result.success) {
@@ -66,8 +87,8 @@ export default function UserManagement() {
     console.log("Selected user IDs:", selectedIds);
   };
 
-  const leads = createMemo(() => (usersResource() || []).filter((u) => u.userType === "LEAD"));
-  const members = createMemo(() => (usersResource() || []).filter((u) => u.userType === "MEMBER"));
+  const leads = createMemo(() => users().filter((u) => u.userType === "LEAD"));
+  const members = createMemo(() => users().filter((u) => u.userType === "MEMBER"));
 
   return (
     <div class="container mx-auto p-4 md:p-6 max-w-7xl">

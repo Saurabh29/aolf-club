@@ -12,6 +12,10 @@ import { getUserGroupsForUser, addUserToGroup } from "~/server/db/repositories/u
 import { createEmailIdentity } from "~/server/db/repositories/email.repository";
 import type { GroupType } from "~/lib/schemas/db/types";
 import type { ApiResult } from "~/lib/types";
+import type { User } from "~/lib/schemas/db/user.schema";
+import type { QuerySpec, QueryResult } from "~/lib/schemas/query";
+import { queryResource, getResourceById } from "~/server/services/query.service";
+import { buildUserFilters } from "~/server/data-sources";
 
 export interface UserWithGroup {
   userId: string;
@@ -267,5 +271,158 @@ export async function importUsersFromCSV(input: ImportUsersInput): Promise<ApiRe
   } catch (error) {
     console.error('[importUsersFromCSV] Failed:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to import users' };
+  }
+}
+
+/**
+ * ============================================================================
+ * QUERY ABSTRACTION LAYER FUNCTIONS
+ * ============================================================================
+ * 
+ * New functions that use the query abstraction layer for filtering,
+ * sorting, and pagination. These replace ad-hoc list functions with
+ * a unified, data-source-agnostic approach.
+ */
+
+/**
+ * Query users with filters and pagination (DynamoDB-backed)
+ * 
+ * Uses the query abstraction layer for consistent API.
+ * Supports:
+ * - Filtering by userType, isAdmin, activeLocationId, locationId, createdAt, updatedAt
+ * - Cursor-based pagination
+ * - Validates filters against whitelist
+ * 
+ * @param spec Query specification (filters, pagination)
+ * @returns ApiResult with QueryResult (items, nextCursor, totalCount)
+ * 
+ * @example
+ * ```typescript
+ * const result = await queryUsers({
+ *   filters: buildUserFilters().byUserType("Volunteer").build(),
+ *   pagination: { mode: "cursor", limit: 50 }
+ * });
+ * ```
+ */
+export async function queryUsers(spec: QuerySpec): Promise<ApiResult<QueryResult<User>>> {
+  try {
+    return await queryResource<User>("users", spec);
+  } catch (error) {
+    console.error("[queryUsers] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to query users"
+    };
+  }
+}
+
+/**
+ * Get users by user type (convenience wrapper)
+ * 
+ * Common use case: list all volunteers, leads, or partners.
+ * 
+ * @param userType The user type to filter by
+ * @param limit Optional limit (default: 50)
+ * @param cursor Optional cursor for pagination
+ * @returns ApiResult with QueryResult
+ */
+export async function getUsersByType(
+  userType: "Volunteer" | "Lead" | "Partner",
+  limit = 50,
+  cursor?: string
+): Promise<ApiResult<QueryResult<User>>> {
+  const filters = buildUserFilters().byUserType(userType).build();
+  
+  return queryUsers({
+    filters,
+    pagination: { mode: "cursor", limit, cursor },
+  });
+}
+
+/**
+ * Get users for a specific location (query abstraction version)
+ * 
+ * Uses location-user relationships to find all users at a location.
+ * This queries the LOCATION#xxx -> USER#yyy edge records.
+ * 
+ * @param locationId Location ID to filter by
+ * @param limit Optional limit (default: 100)
+ * @param cursor Optional cursor for pagination (not implemented for relationship queries yet)
+ * @returns ApiResult with QueryResult
+ */
+export async function queryUsersByLocation(
+  locationId: string,
+  limit = 100,
+  cursor?: string
+): Promise<ApiResult<QueryResult<User>>> {
+  try {
+    // Get user IDs from location-user relationships
+    const locationUsers = await getUsersForLocation(locationId);
+    
+    // Fetch full user records for each userId
+    const allUsers: User[] = [];
+    for (const { userId } of locationUsers) {
+      const user = await getUserById(userId);
+      if (user) {
+        allUsers.push(user);
+      }
+    }
+    
+    // Apply limit (simple pagination, no cursor support yet for relationship-based queries)
+    const items = allUsers.slice(0, limit);
+    
+    return {
+      success: true,
+      data: {
+        items,
+        // No cursor pagination for relationship queries yet
+        nextCursor: undefined,
+      }
+    };
+  } catch (error) {
+    console.error("[queryUsersByLocation] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to query users by location"
+    };
+  }
+}
+
+/**
+ * Get admin users (query abstraction version)
+ * 
+ * @param limit Optional limit (default: 50)
+ * @param cursor Optional cursor for pagination
+ * @returns ApiResult with QueryResult
+ */
+export async function queryAdminUsers(
+  limit = 50,
+  cursor?: string
+): Promise<ApiResult<QueryResult<User>>> {
+  const filters = buildUserFilters().byAdmin(true).build();
+  
+  return queryUsers({
+    filters,
+    pagination: { mode: "cursor", limit, cursor },
+  });
+}
+
+/**
+ * Get users by ID (query abstraction version)
+ * 
+ * Optimized single-user lookup using getResourceById.
+ * 
+ * @param userId User ID
+ * @returns ApiResult with User or null
+ */
+export async function queryUserById(userId: string): Promise<ApiResult<User | null>> {
+  try {
+    return await getResourceById<User>("users", userId);
+  } catch (error) {
+    console.error("[queryUserById] Failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get user"
+    };
   }
 }
